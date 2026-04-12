@@ -22,6 +22,7 @@ from .commands.export import cmd_export
 from .commands.kata import cmd_run_kata
 from .commands.log_cmd import cmd_log
 from .commands.next_action import cmd_next
+from .commands.claim import cmd_claim
 from .commands.review import cmd_review
 from .commands.search import cmd_search
 from .commands.stats import cmd_stats
@@ -77,11 +78,12 @@ def list_specs(
     stale: bool = typer.Option(False, "--stale", help="Only show specs stuck for 3+ days"),
     full: bool = typer.Option(False, "--full", help="Include spec body in JSON output"),
     assignee: Optional[str] = typer.Option(None, "--assignee", "-a", help="Filter by assignee"),
+    claimable: bool = typer.Option(False, "--claimable", help="Only show unclaimed approved specs"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """List all specs."""
-    cmd_list(status, stale, json_out, root, full, assignee)
+    cmd_list(status, stale, json_out, root, full, assignee, claimable)
 
 
 @app.command()
@@ -236,6 +238,18 @@ def export(
 ) -> None:
     """Export all spec context as a single AI-ingestible payload."""
     cmd_export(json_out, active_only, root)
+
+
+@app.command()
+def claim(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    as_agent: str = typer.Option("", "--as", help="Agent name (default: $SPEC_AGENT or 'agent')"),
+    yes: bool = _YES,
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Claim an approved spec: assign to self and advance to in-progress atomically."""
+    cmd_claim(spec_id, as_agent, yes, json_out, root)
 
 
 @app.command()

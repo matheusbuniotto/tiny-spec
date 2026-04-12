@@ -28,6 +28,19 @@ def _extract_gate_checklist(body: str) -> str:
     return "\n".join(lines)
 
 
+def _parse_checklist_items(checklist: str) -> list[str]:
+    items = []
+    for line in checklist.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        item = re.sub(r"^-\s*\[[ xX]\]\s*", "", stripped)
+        item = re.sub(r"^-\s+", "", item)
+        if item:
+            items.append(item)
+    return items
+
+
 def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
@@ -43,6 +56,7 @@ def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
             "status": spec.status.value,
             "has_gate_checklist": bool(checklist),
             "gate_checklist": checklist,
+            "gate_checklist_items": _parse_checklist_items(checklist),
         }))
         return
 

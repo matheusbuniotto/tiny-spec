@@ -64,6 +64,10 @@ spec close <id> --reason duplicate --note "same as <id>" --yes --json
 spec assign <id> "alice" --json
 spec assign <id> "claude-implementer" --json
 spec assign <id> "" --json                          # unassign
+
+# Claim (agent atomic pickup)
+spec claim <id> --yes --json                        # assert approved → assign → in-progress
+spec claim <id> --as "my-agent" --yes --json        # specify agent name (default: $SPEC_AGENT or "agent")
 ```
 
 ### Discovery & search
@@ -72,7 +76,8 @@ spec assign <id> "" --json                          # unassign
 spec search "payment retry" --json
 spec search "schema migration" --status in-progress --json
 spec stats --json                                   # pipeline health object
-spec next --json                                    # top priority action
+spec next --json                                    # top priority action (includes assignee + claimable_queue)
+spec list --claimable --json                        # only unclaimed approved specs — ready to pick up
 spec log --last 20 --json
 spec log --spec <id> --json                         # history for one spec
 spec log --query "gate" --json
@@ -130,6 +135,20 @@ spec show <id> --json                                       # 3. read it back
 spec review <id> --json                                     # 4. pre-flight check
 # if verdict is APPROVE or NEEDS WORK with minor issues, show user and ask
 spec advance <id> --yes --json                             # 5. draft → approved (after user OK)
+```
+
+## Workflow: agent picks up and delivers work
+
+```bash
+spec next --json                                             # 1. find top action (check assignee + claimable_queue)
+spec list --claimable --json                                 # (optional) browse all unclaimed approved specs
+spec claim <id> --yes --json                                 # 2. atomic claim: assert approved, assign, start
+# ... implement the work ...
+spec run-kata --json                                         # 3. katas must pass before gating
+spec advance <id> --note "<delivery summary>" --yes --json  # 4. DELIVERY SIGNAL: in-progress → at-gate
+# The --note is the delivery receipt the human will read. Be specific:
+# "Implemented X. Tests: 12 pass. Edge case Y handled in file.py:42."
+# DO NOT advance past at-gate — that gate belongs to the human.
 ```
 
 ## Workflow: "what's in flight / what should I do next?"
@@ -196,6 +215,8 @@ spec next --json
 ---
 
 ## Gate rule (non-negotiable)
+
+`spec advance <id> --note "..."` moving a spec from `in-progress` to `at-gate` is the **agent delivery signal**. The `--note` is the delivery receipt the human will read — be specific about what was done, what tests passed, and any edge cases handled.
 
 `at-gate → implemented` requires a human.
 
