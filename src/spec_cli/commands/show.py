@@ -51,14 +51,14 @@ def _age_str(dt: datetime) -> str:
     return f"{days} days ago"
 
 
-def cmd_show(spec_id: str, json_out: bool, root: Path) -> None:
+def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
         error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
 
     if json_out:
-        typer.echo(json.dumps(spec.to_dict()))
+        typer.echo(json.dumps(spec.to_dict(include_body=True)))
         return
 
     icon, color = STATUS_STYLE[spec.status]
@@ -83,7 +83,12 @@ def cmd_show(spec_id: str, json_out: bool, root: Path) -> None:
         meta += f"\n\n[dim]Gate notes:[/dim]\n[dim]{spec.gate_notes}[/dim]"
 
     console.print(Panel(meta, title=f"[bold]{spec.title}[/bold]", box=box.ROUNDED, border_style=color))
-    console.print()
-    console.print(Markdown(spec.body))
-    console.print(Rule(style="dim"))
+
+    if full:
+        console.print()
+        console.print(Markdown(spec.body))
+        console.print(Rule(style="dim"))
+    else:
+        console.print(f"[dim]Use [cyan]spec show {spec.id} --full[/cyan] to see the full spec body[/dim]")
+
     console.print(f"[dim]{spec.file_path}[/dim]")

@@ -86,6 +86,7 @@ spec log --query "gate" --json
 ### Quality & gates
 
 ```bash
+spec setup-checks --yes --json  # scan project, auto-configure pre-gate checks
 spec review <id> --json         # AI pre-flight: APPROVE / NEEDS WORK / REJECT
 spec gate-check <id> --json     # show Human Gate Checklist
 spec run-kata --json            # run all katas, exit 1 on failure
@@ -186,6 +187,14 @@ spec close <id> --reason descoped --note "<why>" --yes --json
 ```bash
 spec assign <id> "<name or agent>" --json
 spec list --assignee "<name>" --json   # what are they working on?
+```
+
+## Workflow: "set up pre-gate checks for this project"
+
+```bash
+spec setup-checks --yes --json         # scans for pytest/ruff/mypy/eslint/tsc/cargo/go etc.
+# writes detected checks to .spec/config.yaml
+# these auto-run before any spec can enter at-gate
 ```
 
 ## Workflow: "run the checks before gating"
