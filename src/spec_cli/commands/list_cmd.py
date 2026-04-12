@@ -22,7 +22,7 @@ def _age_days(dt: datetime) -> int:
 
 def cmd_list(
     status: Optional[str], stale: bool, json_out: bool, root: Path,
-    full: bool = False, assignee: Optional[str] = None,
+    full: bool = False, assignee: Optional[str] = None, claimable: bool = False,
 ) -> None:
     root = find_root(root)
     filter_status: Optional[SpecStatus] = None
@@ -43,6 +43,9 @@ def cmd_list(
 
     if assignee:
         specs = [s for s in specs if assignee.lower() in (s.assignee or "").lower()]
+
+    if claimable:
+        specs = [s for s in specs if s.status == SpecStatus.APPROVED and not s.assignee]
 
     if json_out:
         typer.echo(json.dumps([s.to_dict(include_body=full) for s in specs]))

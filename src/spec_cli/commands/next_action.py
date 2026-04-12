@@ -62,13 +62,18 @@ def cmd_next(json_out: bool, root: Path) -> None:
     age_str = f"{days}d ago" if days > 0 else "today"
 
     if json_out:
+        claimable = [s for s in active if s.status == SpecStatus.APPROVED and not s.assignee]
+        claimable.sort(key=lambda s: -_age_days(s.updated_at))
+        queue = [{"id": s.id, "title": s.title, "age_days": _age_days(s.updated_at)} for s in claimable[:3]]
         typer.echo(json.dumps({
             "id": top.id,
             "title": top.title,
             "status": top.status.value,
+            "assignee": top.assignee,
             "action": action,
             "command": cmd,
             "age_days": days,
+            "claimable_queue": queue,
         }))
         return
 

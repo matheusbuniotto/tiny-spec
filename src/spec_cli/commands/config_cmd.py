@@ -22,6 +22,8 @@ def cmd_config_show(json_out: bool, root: Path) -> None:
             "author": cfg.author, "ai_provider": cfg.ai_provider,
             "ai_model": cfg.ai_model, "ai_base_url": cfg.ai_base_url,
             "default_template": cfg.default_template,
+            "git_auto_commit": cfg.git_auto_commit,
+            "katas": [k.to_dict() for k in cfg.katas],
             "project_name": cfg.project_name, "description": cfg.description,
             "languages": cfg.languages, "frameworks": cfg.frameworks,
             "libraries": cfg.libraries, "testing": cfg.testing,
@@ -55,5 +57,9 @@ def cmd_config_show(json_out: bool, root: Path) -> None:
     row("architecture", cfg.architecture)
     row("conventions", cfg.conventions)
     row("out_of_bounds", cfg.out_of_bounds)
+    if cfg.katas:
+        table.add_section()
+        kata_strs = [f"{k.name} ({k.command})" for k in cfg.katas]
+        row("katas", kata_strs)
 
     console.print(Panel(table, title="[bold].spec/config.yaml[/bold]", box=box.ROUNDED, border_style="bright_blue"))

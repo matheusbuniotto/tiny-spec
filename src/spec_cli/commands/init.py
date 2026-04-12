@@ -11,7 +11,7 @@ from ..integrations.git import is_git_repo, git_init, git_context_markdown
 from ..ui import console, success, error
 
 
-def cmd_init(root: Path, author: str, json_out: bool) -> None:
+def cmd_init(root: Path, author: str, yes: bool, json_out: bool) -> None:
     sd = root / ".spec"
 
     if sd.exists():
@@ -21,7 +21,7 @@ def cmd_init(root: Path, author: str, json_out: bool) -> None:
     git_was_repo = is_git_repo(root)
     git_initialized = False
     if not git_was_repo:
-        if not json_out:
+        if not json_out and not yes:
             import questionary
             style = questionary.Style([("question", "bold cyan"), ("answer", "bold white")])
             do_init = questionary.confirm(
