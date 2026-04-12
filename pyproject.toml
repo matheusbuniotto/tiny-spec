@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tiny-spec"
+version = "0.1.0"
+description = "Tiny spec-driven development CLI — human and AI friendly"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer[all]>=0.12",
+    "rich>=13.7",
+    "questionary>=2.0",
+    "python-frontmatter>=1.1",
+    "anthropic>=0.25",
+    "openai>=1.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.6",
+]
+
+[project.scripts]
+spec = "spec_cli.main:app"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov", "ruff", "mypy"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spec_cli"]
+
+[tool.ruff]
+line-length = 100
