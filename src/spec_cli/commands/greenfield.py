@@ -187,15 +187,15 @@ ai_base_url: ""
 default_template: feature
 git_auto_commit: true
 
-# Kata harness — commands that must pass before entering at-gate
-# katas:
+# Pre-gate checks — commands that must pass before entering at-gate
+# checks:
 #   - name: tests
 #     command: pytest
 #     description: Full test suite must pass
 #   - name: lint
 #     command: ruff check .
 #     description: No linting errors
-katas: []
+checks: []
 
 project_name: "{cfg.project_name}"
 description: "{cfg.description}"

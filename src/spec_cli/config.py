@@ -7,8 +7,8 @@ import yaml
 
 
 @dataclass
-class Kata:
-    """A named harness step that must pass before a spec can enter at-gate."""
+class Check:
+    """A named pre-gate check that must pass before a spec can enter at-gate."""
     name: str
     command: str
     description: str = ""
@@ -27,8 +27,8 @@ class Config:
     default_template: str = "feature"
     git_auto_commit: bool = True       # auto-commit .spec/ on transitions
 
-    # Kata harness — commands that must pass before entering at-gate
-    katas: list = field(default_factory=list)   # list of Kata objects
+    # Pre-gate checks — commands that must pass before entering at-gate
+    checks: list = field(default_factory=list)   # list of Check objects
 
     # Project context — used to enrich AI drafts
     project_name: str = ""
@@ -64,15 +64,15 @@ class Config:
             lines.append(f"Conventions: {', '.join(self.conventions)}")
         if self.out_of_bounds:
             lines.append(f"Out of bounds: {', '.join(self.out_of_bounds)}")
-        if self.katas:
-            kata_names = ", ".join(f"{k.name} (`{k.command}`)" for k in self.katas)
-            lines.append(f"Katas (must pass before at-gate): {kata_names}")
+        if self.checks:
+            check_names = ", ".join(f"{c.name} (`{c.command}`)" for c in self.checks)
+            lines.append(f"Checks (must pass before at-gate): {check_names}")
         return "\n".join(lines)
 
 
 _KNOWN_FIELDS = {
     "author", "ai_provider", "ai_model", "ai_base_url", "default_template",
-    "git_auto_commit", "katas",
+    "git_auto_commit", "checks",
     "project_name", "description", "languages", "frameworks",
     "libraries", "testing", "architecture", "conventions", "out_of_bounds",
 }
@@ -88,14 +88,14 @@ def load_config(root: Path) -> Config:
         return Config()
     extra = {k: v for k, v in data.items() if k not in _KNOWN_FIELDS}
 
-    raw_katas = data.get("katas") or []
-    katas = []
-    for k in raw_katas:
-        if isinstance(k, dict) and "name" in k and "command" in k:
-            katas.append(Kata(
-                name=k["name"],
-                command=k["command"],
-                description=k.get("description", ""),
+    raw_checks = data.get("checks") or []
+    checks = []
+    for c in raw_checks:
+        if isinstance(c, dict) and "name" in c and "command" in c:
+            checks.append(Check(
+                name=c["name"],
+                command=c["command"],
+                description=c.get("description", ""),
             ))
 
     return Config(
@@ -105,7 +105,7 @@ def load_config(root: Path) -> Config:
         ai_base_url=data.get("ai_base_url", ""),
         default_template=data.get("default_template", "feature"),
         git_auto_commit=data.get("git_auto_commit", True),
-        katas=katas,
+        checks=checks,
         project_name=data.get("project_name", ""),
         description=data.get("description", ""),
         languages=data.get("languages") or [],
@@ -122,16 +122,14 @@ def load_config(root: Path) -> Config:
 def save_config(config: Config, root: Path) -> None:
     config_path = root / ".spec" / "config.yaml"
     data: dict = {}
-    # Tooling first
     data["author"] = config.author
     data["ai_provider"] = config.ai_provider
     data["ai_model"] = config.ai_model
     data["ai_base_url"] = config.ai_base_url
     data["default_template"] = config.default_template
     data["git_auto_commit"] = config.git_auto_commit
-    if config.katas:
-        data["katas"] = [k.to_dict() for k in config.katas]
-    # Project context
+    if config.checks:
+        data["checks"] = [c.to_dict() for c in config.checks]
     if config.project_name:
         data["project_name"] = config.project_name
     if config.description:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -11,13 +10,9 @@ from rich import box
 
 from ..models import SpecStatus, STATUS_STYLE
 from ..storage import list_specs, find_root
-from ..ui import console, error
+from ..ui import console, error, age_days
 
 STALE_DAYS = 3
-
-
-def _age_days(dt: datetime) -> int:
-    return (datetime.utcnow() - dt).days
 
 
 def cmd_list(
@@ -39,7 +34,7 @@ def cmd_list(
     if stale:
         specs = [s for s in specs
                  if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
-                 and _age_days(s.updated_at) >= STALE_DAYS]
+                 and age_days(s.updated_at) >= STALE_DAYS]
 
     if assignee:
         specs = [s for s in specs if assignee.lower() in (s.assignee or "").lower()]
@@ -70,7 +65,7 @@ def cmd_list(
 
     for i, s in enumerate(specs):
         icon, color = STATUS_STYLE[s.status]
-        days = _age_days(s.updated_at)
+        days = age_days(s.updated_at)
         age_str = f"{days}d" if days > 0 else "today"
         is_stale = days >= STALE_DAYS and s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
         age_style = "[red]" if is_stale else "[dim]"

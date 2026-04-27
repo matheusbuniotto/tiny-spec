@@ -15,7 +15,7 @@ from ..models import SpecStatus, STATUS_STYLE, TRANSITIONS
 from ..state import transition
 from ..storage import find_spec, find_root
 from ..ui import console, err_console, error
-from .kata import run_katas_for_spec
+from .checks import run_checks_for_spec
 
 # Gate states require notes
 _NOTES_REQUIRED = {SpecStatus.AT_GATE, SpecStatus.IMPLEMENTED}
@@ -80,11 +80,12 @@ def _check_drift(spec, root: Path) -> bool:
 
 def _do_transition(
     spec_id: str, target: SpecStatus, note: Optional[str], yes: bool,
-    json_out: bool, root: Path, skip_kata: bool = False, skip_kata_reason: str = "",
+    json_out: bool, root: Path, skip_checks: bool = False, skip_checks_reason: str = "",
+    _spec=None,
 ) -> None:
     from ..config import load_config
     root = find_root(root)
-    spec = _resolve(spec_id, root, json_out)
+    spec = _spec if _spec is not None else _resolve(spec_id, root, json_out)
     old_status = spec.status
     notes = _get_notes(target, note, yes, json_out)
 
@@ -97,35 +98,59 @@ def _do_transition(
                 box=box.ROUNDED, border_style="yellow",
             ))
 
-    # Kata gate enforcement — runs before entering at-gate
+    cfg = load_config(root)
+
+    # Validate spec quality when approving
+    if target == SpecStatus.APPROVED and old_status == SpecStatus.DRAFT:
+        from .validate import validate_spec
+        vr = validate_spec(spec)
+        if not json_out:
+            if vr.errors:
+                lines = [f"[red]✗[/red] [bold]{i.code}[/bold]  {i.message}" for i in vr.errors]
+                for i in vr.warnings:
+                    lines.append(f"[yellow]⚠[/yellow] [dim]{i.code}[/dim]  {i.message}")
+                console.print(Panel(
+                    "\n".join(lines) + "\n\n[dim]Fix errors or use [cyan]--yes[/cyan] to override.[/dim]",
+                    title="[bold red]Spec validation failed[/bold red]",
+                    box=box.ROUNDED, border_style="red",
+                ))
+                if not yes:
+                    raise typer.Exit(1)
+            elif vr.warnings:
+                lines = [f"[yellow]⚠[/yellow] [dim]{i.code}[/dim]  {i.message}" for i in vr.warnings]
+                console.print(Panel(
+                    "\n".join(lines),
+                    title="[bold yellow]Spec warnings[/bold yellow]",
+                    box=box.ROUNDED, border_style="yellow",
+                ))
+
+    # Pre-gate check enforcement — runs before entering at-gate
     if target == SpecStatus.AT_GATE:
-        cfg = load_config(root)
-        if cfg.katas and not skip_kata:
+        if cfg.checks and not skip_checks:
             if not json_out:
-                console.print(f"[dim]Running {len(cfg.katas)} kata{'s' if len(cfg.katas) != 1 else ''} before gate...[/dim]\n")
-            results, all_passed = run_katas_for_spec(root, spec_id)
+                console.print(f"[dim]Running {len(cfg.checks)} check{'s' if len(cfg.checks) != 1 else ''} before gate...[/dim]\n")
+            results, all_passed = run_checks_for_spec(root, spec_id, cfg=cfg)
             if not all_passed:
                 failed = [r["name"] for r in results if not r["passed"]]
                 if json_out:
                     error(
-                        f"Kata failures block gate: {', '.join(failed)}",
+                        f"Check failures block gate: {', '.join(failed)}",
                         json_out,
-                        {"error": "kata_failed", "failed": failed, "results": results,
-                         "hint": "Run spec run-kata to see details, or use --skip-kata --note 'reason' to override"},
+                        {"error": "check_failed", "failed": failed, "results": results,
+                         "hint": "Run spec run-checks to see details, or use --skip-checks --note 'reason' to override"},
                     )
                 console.print()
-                from .kata import _render_results
+                from .checks import _render_results
                 _render_results(results, spec_id, root)
                 raise typer.Exit(1)
             if not json_out and results:
                 passed_count = sum(1 for r in results if r["passed"])
-                console.print(f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} katas passed[/dim]\n")
-        elif skip_kata and cfg.katas:
+                console.print(f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} checks passed[/dim]\n")
+        elif skip_checks and cfg.checks:
             if not json_out:
-                reason_str = f" — {skip_kata_reason}" if skip_kata_reason else ""
-                console.print(f"  [yellow]⚠ Katas skipped{reason_str}[/yellow]\n")
+                reason_str = f" — {skip_checks_reason}" if skip_checks_reason else ""
+                console.print(f"  [yellow]⚠ Checks skipped{reason_str}[/yellow]\n")
 
-    cfg = load_config(root)
     try:
         spec, git_sha = transition(spec, target, root, notes, auto_commit=cfg.git_auto_commit)
     except typer.BadParameter as e:
@@ -175,7 +200,7 @@ def _do_transition(
 
 def cmd_advance(
     spec_id: str, note: Optional[str], yes: bool, json_out: bool, root: Path,
-    skip_kata: bool = False, skip_kata_reason: str = "",
+    skip_checks: bool = False, skip_checks_reason: str = "",
 ) -> None:
     root = find_root(root)
     spec = _resolve(spec_id, root, json_out)
@@ -185,7 +210,7 @@ def cmd_advance(
             "Already at terminal state — nothing to advance.",
             json_out, {"error": "terminal_state", "status": spec.status.value},
         )
-    _do_transition(spec_id, next_states[0], note, yes, json_out, root, skip_kata, skip_kata_reason)
+    _do_transition(spec_id, next_states[0], note, yes, json_out, root, skip_checks, skip_checks_reason, _spec=spec)
 
 
 def cmd_revert(spec_id: str, note: Optional[str], yes: bool, json_out: bool, root: Path) -> None:

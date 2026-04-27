@@ -9,11 +9,12 @@ import typer
 from rich.panel import Panel
 from rich import box
 
+from datetime import datetime
+
+from ..config import load_config
 from ..models import SpecStatus, STATUS_STYLE, CLOSE_REASONS
 from ..storage import find_spec, find_root, save_spec, append_log
 from ..ui import console, error
-
-from datetime import datetime
 
 
 def cmd_close(spec_id: str, reason: str, note: Optional[str], yes: bool, json_out: bool, root: Path) -> None:
@@ -56,7 +57,6 @@ def cmd_close(spec_id: str, reason: str, note: Optional[str], yes: bool, json_ou
     save_spec(spec, root)
     append_log(root, f"✕ CLOSED `{spec.id}` **{spec.title}** ({reason}){' — ' + resolved_note if resolved_note else ''}")
 
-    from ..config import load_config
     cfg = load_config(root)
     git_sha = None
     if cfg.git_auto_commit:

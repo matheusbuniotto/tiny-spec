@@ -55,7 +55,7 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
             "architecture": cfg.architecture,
             "conventions": cfg.conventions,
             "out_of_bounds": cfg.out_of_bounds,
-            "katas": [k.to_dict() for k in cfg.katas],
+            "checks": [c.to_dict() for c in cfg.checks],
         },
         "constitution": constitution,
         "git_context": git_context,
@@ -95,8 +95,8 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
         cfg_table.add_row("frameworks", "  ".join(f"[cyan]{f}[/cyan]" for f in cfg.frameworks))
     if cfg.testing:
         cfg_table.add_row("testing", cfg.testing)
-    if cfg.katas:
-        cfg_table.add_row("katas", "  ".join(f"[magenta]{k.name}[/magenta]" for k in cfg.katas))
+    if cfg.checks:
+        cfg_table.add_row("checks", "  ".join(f"[magenta]{c.name}[/magenta]" for c in cfg.checks))
     if cfg.out_of_bounds:
         cfg_table.add_row("out of bounds", "  ".join(f"[red]{o}[/red]" for o in cfg.out_of_bounds))
     console.print(Panel(cfg_table, title="[bold]Project context[/bold]", box=box.ROUNDED,

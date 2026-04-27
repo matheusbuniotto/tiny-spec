@@ -61,12 +61,9 @@ def save_spec(spec: Spec, root: Path) -> Path:
 
     # Find existing file (may be in specs/ or decisions/)
     existing = _find_file_by_id(spec.id, root)
-    target = sd / filename_for(spec.id, spec.title)
-    if existing and existing != target:
-        existing.rename(target)  # handles title change or template change
-        existing = target
-
     path = sd / filename_for(spec.id, spec.title)
+    if existing and existing != path:
+        existing.rename(path)
     meta = {
         "id": spec.id,
         "title": spec.title,

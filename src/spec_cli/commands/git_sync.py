@@ -18,7 +18,6 @@ def _refresh_git_context(root: Path) -> bool:
     new_content = git_context_markdown(root)
     if not new_content:
         return False
-    placeholder = "> No commits yet"
     old_content = ctx_path.read_text() if ctx_path.exists() else ""
     if old_content == new_content:
         return False
@@ -70,9 +69,8 @@ def cmd_git_context(json_out: bool, root: Path) -> None:
 
     from ..integrations.git import git_recent_commits
     commits = git_recent_commits(root, n=10)
-
     ctx_path = root / ".spec" / "git-context.md"
-    new_content = git_context_markdown(root)
+    new_content = git_context_markdown(root, commits=commits)
     if new_content and ctx_path.exists():
         ctx_path.write_text(new_content)
 

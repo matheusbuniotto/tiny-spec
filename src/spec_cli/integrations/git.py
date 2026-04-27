@@ -51,9 +51,10 @@ def git_recent_commits(root: Path, n: int = 10) -> list[dict]:
     return commits
 
 
-def git_context_markdown(root: Path, n: int = 10) -> str:
+def git_context_markdown(root: Path, n: int = 10, commits: list[dict] | None = None) -> str:
     """Build a markdown block summarising recent git history for AI context."""
-    commits = git_recent_commits(root, n)
+    if commits is None:
+        commits = git_recent_commits(root, n)
     if not commits:
         return ""
     lines = ["# Git Context\n", f"Last {len(commits)} commits:\n"]

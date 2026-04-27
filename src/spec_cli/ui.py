@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import NoReturn
 
 import typer
@@ -35,3 +36,7 @@ def json_or(data, render_fn, json_out: bool) -> None:
         typer.echo(json.dumps(data() if callable(data) else data))
     else:
         render_fn()
+
+
+def age_days(dt: datetime) -> int:
+    return (datetime.utcnow() - dt).days

@@ -1,4 +1,4 @@
-"""Scan the project and auto-configure katas (pre-gate checks) in config.yaml."""
+"""Scan the project and auto-configure pre-gate checks in config.yaml."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich import box
 
-from ..config import load_config, save_config, Kata
+from ..config import load_config, save_config, Check
 from ..ui import console, success, error
 
 
@@ -205,10 +205,10 @@ _DETECTORS: list[dict] = [
 ]
 
 
-def _detect_checks(root: Path) -> list[Kata]:
-    """Scan project and return detected katas, one per category."""
+def _detect_checks(root: Path) -> list[Check]:
+    """Scan project and return detected checks, one per category."""
     seen_categories: set[str] = set()
-    results: list[Kata] = []
+    results: list[Check] = []
 
     for d in _DETECTORS:
         cat = d["category"]
@@ -216,7 +216,7 @@ def _detect_checks(root: Path) -> list[Kata]:
             continue
         try:
             if d["detect"](root):
-                results.append(Kata(name=d["name"], command=d["command"], description=d["description"]))
+                results.append(Check(name=d["name"], command=d["command"], description=d["description"]))
                 seen_categories.add(cat)
         except Exception:
             continue
@@ -238,7 +238,7 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
             console.print(
                 "[dim]No test/lint/typecheck tools detected.[/dim]\n\n"
                 "[dim]Manually add checks to[/dim] [cyan].spec/config.yaml[/cyan]:\n\n"
-                "[dim]katas:\n"
+                "[dim]checks:\n"
                 "  - name: tests\n"
                 "    command: pytest\n"
                 "    description: Test suite must pass[/dim]"
@@ -246,19 +246,19 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
         return
 
     if json_out:
-        if cfg.katas and not yes:
+        if cfg.checks and not yes:
             typer.echo(json.dumps({
-                "detected": [k.to_dict() for k in detected],
-                "existing": [k.to_dict() for k in cfg.katas],
+                "detected": [c.to_dict() for c in detected],
+                "existing": [c.to_dict() for c in cfg.checks],
                 "written": False,
                 "message": "Checks already configured. Use --yes to overwrite.",
             }))
             return
 
-        cfg.katas = detected
+        cfg.checks = detected
         save_config(cfg, root)
         typer.echo(json.dumps({
-            "detected": [k.to_dict() for k in detected],
+            "detected": [c.to_dict() for c in detected],
             "written": True,
         }))
         return
@@ -269,8 +269,8 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
     table.add_column("Command", style="cyan", min_width=20)
     table.add_column("Description", style="dim")
 
-    for k in detected:
-        table.add_row(k.name, k.command, k.description)
+    for c in detected:
+        table.add_row(c.name, c.command, c.description)
 
     console.print(Panel(
         table,
@@ -278,8 +278,8 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
         box=box.ROUNDED, border_style="bright_blue",
     ))
 
-    if cfg.katas:
-        existing_cmds = ", ".join(k.command for k in cfg.katas)
+    if cfg.checks:
+        existing_cmds = ", ".join(c.command for c in cfg.checks)
         console.print(f"\n[yellow]Existing checks:[/yellow] {existing_cmds}")
 
     if not yes:
@@ -293,11 +293,11 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
             console.print("[dim]Cancelled.[/dim]")
             return
 
-    cfg.katas = detected
+    cfg.checks = detected
     save_config(cfg, root)
     success("checks", (
         f"[bright_green]Wrote {len(detected)} check{'s' if len(detected) != 1 else ''}[/bright_green] "
         f"to [cyan].spec/config.yaml[/cyan]\n\n"
-        f"  [dim]Run them:[/dim] [cyan]spec run-kata[/cyan]\n"
+        f"  [dim]Run them:[/dim] [cyan]spec run-checks[/cyan]\n"
         f"  [dim]They auto-run before[/dim] [magenta]at-gate[/magenta]"
     ), border="bright_blue")

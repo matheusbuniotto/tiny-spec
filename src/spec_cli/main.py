@@ -19,14 +19,14 @@ from .commands.assign import cmd_assign
 from .commands.close import cmd_close
 from .commands.edit import cmd_edit
 from .commands.export import cmd_export
-from .commands.kata import cmd_run_kata
+from .commands.checks import cmd_run_checks
 from .commands.log_cmd import cmd_log
 from .commands.next_action import cmd_next
 from .commands.claim import cmd_claim
-from .commands.review import cmd_review
 from .commands.search import cmd_search
 from .commands.stats import cmd_stats
 from .commands.setup_checks import cmd_setup_checks
+from .commands.validate import cmd_validate
 
 app = typer.Typer(
     name="spec",
@@ -90,13 +90,13 @@ def new(
 def advance(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
     note: Optional[str] = typer.Option(None, "--note", "-n", help="Required at gate transitions"),
-    skip_kata: bool = typer.Option(False, "--skip-kata", help="Skip kata checks (requires --note explaining why)"),
+    skip_checks: bool = typer.Option(False, "--skip-checks", help="Skip pre-gate checks (requires --note explaining why)"),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Advance to next state: draft → approved → in-progress → at-gate → implemented"""
-    cmd_advance(spec_id, note, yes, json_out, root, skip_kata=skip_kata, skip_kata_reason=note or "")
+    cmd_advance(spec_id, note, yes, json_out, root, skip_checks=skip_checks, skip_checks_reason=note or "")
 
 
 @app.command(rich_help_panel="Lifecycle")
@@ -227,13 +227,13 @@ def log(
 # ── Quality ──────────────────────────────────────────────────
 
 @app.command(rich_help_panel="Quality")
-def review(
+def validate(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
-    """AI pre-flight review of a spec before approval."""
-    cmd_review(spec_id, json_out, root)
+    """Check spec structure and AC quality before approving."""
+    cmd_validate(spec_id, json_out, root)
 
 
 @app.command("gate-check", rich_help_panel="Quality")
@@ -256,14 +256,14 @@ def setup_checks(
     cmd_setup_checks(yes, json_out, root)
 
 
-@app.command("run-kata", rich_help_panel="Quality")
-def run_kata(
+@app.command("run-checks", rich_help_panel="Quality")
+def run_checks(
     spec_id: Optional[str] = typer.Argument(None, help="Spec ID for context (optional)"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
-    """Run all configured katas. Exits 1 if any fail."""
-    cmd_run_kata(spec_id, json_out, root)
+    """Run all configured pre-gate checks. Exits 1 if any fail."""
+    cmd_run_checks(spec_id, json_out, root)
 
 
 # ── Setup ────────────────────────────────────────────────────

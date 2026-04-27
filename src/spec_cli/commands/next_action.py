@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from pathlib import Path
 
 import typer
@@ -11,7 +10,7 @@ from rich import box
 
 from ..models import SpecStatus, STATUS_STYLE, CLOSE_REASONS
 from ..storage import list_specs, find_root
-from ..ui import console
+from ..ui import console, age_days
 
 _PRIORITY = {
     SpecStatus.AT_GATE:     0,
@@ -35,10 +34,6 @@ _COMMANDS: dict[SpecStatus, str] = {
 }
 
 
-def _age_days(dt: datetime) -> int:
-    return (datetime.utcnow() - dt).days
-
-
 def cmd_next(json_out: bool, root: Path) -> None:
     root = find_root(root)
     specs = list_specs(root)
@@ -52,19 +47,19 @@ def cmd_next(json_out: bool, root: Path) -> None:
             console.print("[dim]Create one:[/dim] [cyan]spec new \"...\"[/cyan]")
         return
 
-    active.sort(key=lambda s: (_PRIORITY.get(s.status, 99), -_age_days(s.updated_at)))
+    active.sort(key=lambda s: (_PRIORITY.get(s.status, 99), -age_days(s.updated_at)))
     top = active[0]
 
     action = _ACTIONS.get(top.status, "Review")
     cmd = _COMMANDS.get(top.status, f"spec show {top.id}").format(id=top.id)
     icon, color = STATUS_STYLE[top.status]
-    days = _age_days(top.updated_at)
+    days = age_days(top.updated_at)
     age_str = f"{days}d ago" if days > 0 else "today"
 
     if json_out:
         claimable = [s for s in active if s.status == SpecStatus.APPROVED and not s.assignee]
-        claimable.sort(key=lambda s: -_age_days(s.updated_at))
-        queue = [{"id": s.id, "title": s.title, "age_days": _age_days(s.updated_at)} for s in claimable[:3]]
+        claimable.sort(key=lambda s: -age_days(s.updated_at))
+        queue = [{"id": s.id, "title": s.title, "age_days": age_days(s.updated_at)} for s in claimable[:3]]
         typer.echo(json.dumps({
             "id": top.id,
             "title": top.title,

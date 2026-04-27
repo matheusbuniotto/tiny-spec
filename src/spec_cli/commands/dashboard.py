@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
 from pathlib import Path
 
 from rich.columns import Columns
@@ -12,17 +11,13 @@ from rich import box
 
 from ..models import Spec, SpecStatus, STATUS_STYLE
 from ..storage import list_specs, find_root
-from ..ui import console
+from ..ui import console, age_days
 
 STALE_DAYS = 3
 
 
-def _age_days(dt: datetime) -> int:
-    return (datetime.utcnow() - dt).days
-
-
 def _age_badge(spec: Spec) -> str:
-    days = _age_days(spec.updated_at)
+    days = age_days(spec.updated_at)
     if days >= STALE_DAYS and spec.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED):
         return f" [red]({days}d)[/red]"
     if days >= 1:
@@ -65,9 +60,9 @@ def _alerts(specs) -> str:
         lines.append(f"[magenta]⏸ {len(at_gate)} spec{'s' if len(at_gate) != 1 else ''} waiting at gate:[/magenta] {ids}")
 
     stale = [s for s in specs
-             if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED) and _age_days(s.updated_at) >= STALE_DAYS]
+             if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED) and age_days(s.updated_at) >= STALE_DAYS]
     if stale:
-        ids = ", ".join(f"[bold]{s.id}[/bold] ({_age_days(s.updated_at)}d)" for s in stale)
+        ids = ", ".join(f"[bold]{s.id}[/bold] ({age_days(s.updated_at)}d)" for s in stale)
         lines.append(f"[red]⚠ {len(stale)} stale spec{'s' if len(stale) != 1 else ''} (>{STALE_DAYS}d):[/red] {ids}")
 
     return "\n".join(lines)
