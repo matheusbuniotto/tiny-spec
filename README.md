@@ -50,28 +50,37 @@ Every spec includes a **Human Gate Checklist** — a concrete list of verificati
 # Install
 git clone https://github.com/matheusbuniotto/tiny-spec && cd tiny-spec && uv tool install .
 
-# Set up a new project (interactive wizard)
+# Human setup — new project
 spec init my-project --type python-api
-
-# Or add tiny-spec to an existing project
 cd my-project
+
+# Or human setup — existing project
+cd my-existing-project
 spec init
 
-# Create a spec (AI-drafted)
+# Human readiness pass
+spec doctor
+spec setup-checks
+spec doctor
+
+# Human or agent drafts a spec
 spec new "User authentication with JWT" --template feature --ai
-
-# See what's in flight
-spec dashboard
-
-# Agent-first lifecycle
+spec validate 0001
 spec approve 0001          # human: draft → approved
-spec claim 0001 --as claude-code --yes --json   # agent: approved → in-progress
-spec context 0001 --json   # agent: focused task packet
-spec deliver 0001 --note "Implemented JWT auth; tests pass" --yes --json  # agent → at-gate
-spec gate 0001             # human: review packet
-spec pass 0001 --note "Verified tests, happy path, failure path, diff"     # human → implemented
+
+# Agent work loop
+spec boot --agent implementer --json
+spec claim 0001 --as claude-code --yes --json
+spec context 0001 --json
+spec deliver 0001 --note "AC1: token returned; AC2: invalid creds 401; Checks: pytest passed" --yes --json
+
+# Human gate
+spec gate 0001
+spec pass 0001 --note "Verified tests, happy path, failure path, diff"
 # or: spec reject 0001 --note "Expired token returns 500" --category missed-ac --correction "Agent missed failure AC"
 ```
+
+**Rule of thumb:** humans run `init`, `doctor`, `setup-checks`, `approve`, `gate`, `pass/reject`. Agents run `boot`, `claim`, `context`, `run-checks`, `deliver`.
 
 ---
 
@@ -93,6 +102,7 @@ spec pass 0001 --note "Verified tests, happy path, failure path, diff"     # hum
 | `spec advance 0001` | Advanced: move to next state directly |
 | `spec revert 0001` | Send back to draft |
 | `spec edit 0001` | Open spec in `$EDITOR` |
+| `spec doctor` | Check harness readiness after setup |
 | `spec boot --json` | Small startup packet for coding agents |
 | `spec next` | Show the most important thing to do right now |
 | `spec gate-check 0001` | Show only the Human Gate Checklist for a spec |

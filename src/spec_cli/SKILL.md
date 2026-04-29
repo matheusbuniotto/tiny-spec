@@ -13,9 +13,15 @@ Never invent commands — only use what's listed here.
 
 ---
 
+## Human setup vs agent work
+
+Humans usually run project setup: `spec init`, `spec doctor`, `spec setup-checks`.
+Agents should not run `spec init` unless the human explicitly asks.
+
 ## Bootstrap (start of every session)
 
 ```bash
+spec doctor --json                  # readiness: checks, constitution, project context
 spec boot --json                    # small agent packet: rules, next action, claimable queue
 spec boot --agent implementer --json # role-specific queue when acting as an implementer
 ```
@@ -58,7 +64,7 @@ spec gate <id> --json                               # human review packet
 spec approve <id> --yes --json                      # human: draft → approved
 spec route <id> implementer --json                  # set suggested agent role
 spec claim <id> --yes --json                        # agent: approved → assigned → in-progress
-spec deliver <id> --note "delivery receipt" --yes --json  # agent: in-progress → at-gate
+spec deliver <id> --note "AC1: evidence; AC2: evidence; Checks: ..." --yes --json  # agent → at-gate
 spec pass <id> --note "what was verified" --yes --json    # human only: at-gate → implemented
 spec reject <id> --note "what failed" --category missed-ac --correction "reusable lesson" --yes --json
 
@@ -86,6 +92,7 @@ spec claim <id> --as "my-agent" --yes --json        # specify runtime name (defa
 spec search "payment retry" --json
 spec search "schema migration" --status in-progress --json
 spec stats --json                                   # pipeline health object
+spec doctor --json                                  # harness readiness check
 spec boot --json                                    # agent startup packet
 spec next --json                                    # top priority action (includes assignee + claimable_queue)
 spec next --agent implementer --json                # top priority for a role

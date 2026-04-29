@@ -46,9 +46,22 @@ def generate_claude_md(cfg: Config, project_name: str) -> str:
 
 ---
 
+## Human setup vs agent work
+
+Humans usually run project setup:
+
+```bash
+spec init
+spec doctor
+spec setup-checks
+```
+
+Agents should not run `spec init` unless the human explicitly asks.
+
 ## Session start — agent protocol
 
 ```bash
+spec doctor --json           # readiness: checks, constitution, project context
 spec boot --json             # small startup packet: rules, next action, claimable queue
 spec boot --agent implementer --json
 ```
@@ -80,6 +93,7 @@ spec boot --json
 spec context <id> --json
 spec gate <id> --json
 spec stats --json
+spec doctor --json
 spec log --last 20 --json
 spec log --spec <id> --json
 
@@ -88,7 +102,7 @@ spec new "<title>" --template <feature|bug|adr|api|data-pipeline|experiment> --a
 spec approve <id> --yes --json
 spec route <id> implementer --json
 spec claim <id> --as "claude-code" --yes --json
-spec deliver <id> --note "..." --yes --json
+spec deliver <id> --note "AC1: ...; AC2: ...; Checks: ..." --yes --json
 spec pass <id> --note "..." --yes --json        # human only
 spec reject <id> --note "..." --category missed-ac --correction "..." --yes --json
 spec advance <id> --yes --json                   # advanced escape hatch
@@ -120,6 +134,7 @@ draft → approved → in-progress → at-gate → implemented
 ```
 
 - Agents use `claim`, `context`, `run-checks`, and `deliver`
+- Delivery notes must include AC evidence: `AC1 → code/test evidence`, `AC2 → code/test evidence`
 - Humans use `gate`, `pass`, and `reject`
 - `at-gate → implemented` requires explicit human verification — never pass automatically
 - Checks (if configured) block `deliver` / `in-progress → at-gate` automatically

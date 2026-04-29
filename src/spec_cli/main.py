@@ -38,6 +38,7 @@ from .commands.agentic import (
     cmd_route,
 )
 from .commands.corrections import cmd_correction, cmd_corrections
+from .commands.doctor import cmd_doctor
 
 app = typer.Typer(
     name="spec",
@@ -425,6 +426,15 @@ def run_checks(
 
 
 # ── Setup ────────────────────────────────────────────────────
+
+
+@app.command(rich_help_panel="Setup")
+def doctor(
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Check if the project is ready for agentic spec work."""
+    cmd_doctor(json_out, root)
 
 
 @app.command(rich_help_panel="Setup")

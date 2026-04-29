@@ -31,10 +31,20 @@ Added the first grug-sized slice of the agentic harness:
 - Feature template now includes `Agent Routing & Context`.
 - Docs/skills updated away from stale `run-kata` / missing `spec review` references.
 
+Follow-up additions in same branch:
+- `spec doctor` readiness check for `.spec`, git, checks, constitution, project context, Claude setup
+- `spec deliver --json` now returns `delivered`, `agent_must_stop`, `human_next`, and gate checklist items
+- `spec deliver` warns when delivery notes omit AC evidence
+- Default `.spec/README.md`, `.spec/constitution.md`, `CLAUDE.md`, README, and skill docs now teach the agent-first protocol and AC-evidence delivery notes
+- Setup docs now explicitly separate human setup (`init`, `doctor`, `setup-checks`) from agent work (`boot`, `claim`, `context`, `deliver`)
+- `spec init --json` now returns `human_next_actions` and `agent_first_command` for scriptable onboarding
+
 Verification:
 - `uv run spec --help`
+- `uv run python -m compileall -q src/spec_cli`
 - Smoke lifecycle in temp project: init → new → approve → boot → claim → context → deliver → gate → reject → corrections
 - Smoke pass path: init → new → approve → claim → deliver → pass
+- Smoke doctor + deliver warning/no-warning paths
 - Ruff on changed Python files: green
 
 ### Session 7: SKILL.md + Agent Overhaul

@@ -132,6 +132,32 @@ def _section_items(body: str, regex: re.Pattern[str]) -> list[str]:
     return _parse_bullets(match.group(1))
 
 
+def _delivery_warning(note: Optional[str]) -> Optional[str]:
+    if note and re.search(r"\bAC\d*\b|acceptance criteria", note, re.IGNORECASE):
+        return None
+    return "delivery_note_missing_ac_evidence"
+
+
+def _deliver_extra(spec, note: Optional[str]) -> dict:
+    checklist = _extract_gate_checklist(spec.body)
+    warning = _delivery_warning(note)
+    data = {
+        "delivered": True,
+        "agent_must_stop": True,
+        "human_next": {
+            "action": "Human reviews gate and passes or rejects",
+            "command": f"spec gate {spec.id}",
+        },
+        "gate_checklist_items": _parse_checklist_items(checklist),
+        "delivery_note_warning": warning,
+    }
+    if warning:
+        data["delivery_note_recommendation"] = (
+            "Include AC evidence: AC1 → code/test evidence; AC2 → code/test evidence."
+        )
+    return data
+
+
 def cmd_boot(agent: str, json_out: bool, root: Path) -> None:
     root = find_root(root)
     cfg = load_config(root)
@@ -270,6 +296,17 @@ def cmd_deliver(
             json_out,
             {"error": "not_deliverable", "status": spec.status.value},
         )
+    warning = _delivery_warning(note)
+    if warning and not json_out:
+        console.print(
+            Panel(
+                "[yellow]Delivery note does not include AC evidence.[/yellow]\n"
+                "[dim]Recommended: AC1 → code/test evidence; AC2 → code/test evidence.[/dim]",
+                title="[bold yellow]Delivery note warning[/bold yellow]",
+                box=box.ROUNDED,
+                border_style="yellow",
+            )
+        )
     _do_transition(
         spec_id,
         SpecStatus.AT_GATE,
@@ -280,6 +317,7 @@ def cmd_deliver(
         skip_checks=skip_checks,
         skip_checks_reason=note or "",
         _spec=spec,
+        extra_json=_deliver_extra(spec, note),
     )
 
 
