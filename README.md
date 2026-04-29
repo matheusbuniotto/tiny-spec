@@ -48,7 +48,7 @@ Every spec includes a **Human Gate Checklist** — a concrete list of verificati
 
 ```bash
 # Install
-uv tool install tiny-spec
+git clone https://github.com/matheusbuniotto/tiny-spec && cd tiny-spec && uv tool install .
 
 # Set up a new project (interactive wizard)
 spec init my-project --type python-api
@@ -224,11 +224,34 @@ Project types: `blank`, `python-api`, `typescript-web`, `cli-tool`
 Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Run without installing (try it instantly)
-uvx tiny-spec
+# Clone and install
+git clone https://github.com/matheusbuniotto/tiny-spec && cd tiny-spec
+uv tool install .
+```
 
-# Or install as a persistent tool
-uv tool install tiny-spec
+### Agentic install (for AI agents and CI)
+
+If you're provisioning an environment from a script or letting an AI agent set up tiny-spec, use this self-contained sequence. It installs `uv` if missing, then installs from the repo — no prompts, no manual steps:
+
+```bash
+# 1. Install uv (idempotent — safe to run even if uv is already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Reload PATH so the next command finds uv without a shell restart
+export PATH="$HOME/.local/bin:$PATH"
+
+# 3. Clone and install tiny-spec
+git clone https://github.com/matheusbuniotto/tiny-spec && uv tool install ./tiny-spec
+
+# 4. Verify
+spec --version
+```
+
+**For Claude Code agents** — paste this into your `CLAUDE.md` or agent preamble so the agent can self-install before its first `spec` call:
+
+```
+If `spec` is not found, run:
+  curl -LsSf https://astral.sh/uv/install.sh | sh && export PATH="$HOME/.local/bin:$PATH" && git clone https://github.com/matheusbuniotto/tiny-spec && uv tool install ./tiny-spec
 ```
 
 For AI drafting, set your API key:
