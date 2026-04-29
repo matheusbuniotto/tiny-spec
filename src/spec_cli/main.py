@@ -6,7 +6,7 @@ from typing import Optional
 import typer
 
 from .commands.init import cmd_init
-from .commands.greenfield import cmd_greenfield, PROJECT_TYPES
+from .commands.greenfield import cmd_greenfield
 from .commands.new import cmd_new
 from .commands.list_cmd import cmd_list
 from .commands.show import cmd_show
@@ -27,11 +27,22 @@ from .commands.search import cmd_search
 from .commands.stats import cmd_stats
 from .commands.setup_checks import cmd_setup_checks
 from .commands.validate import cmd_validate
+from .commands.agentic import (
+    cmd_approve,
+    cmd_boot,
+    cmd_context,
+    cmd_deliver,
+    cmd_gate,
+    cmd_pass,
+    cmd_reject,
+    cmd_route,
+)
+from .commands.corrections import cmd_correction, cmd_corrections
 
 app = typer.Typer(
     name="spec",
     help="[bold cyan]tiny-spec[/bold cyan] — spec-driven development CLI\n\n"
-         "Human and AI friendly. All commands support [cyan]--json[/cyan] and [cyan]--yes[/cyan].",
+    "Human and AI friendly. All commands support [cyan]--json[/cyan] and [cyan]--yes[/cyan].",
     no_args_is_help=False,
     invoke_without_command=True,
     rich_markup_mode="rich",
@@ -39,7 +50,7 @@ app = typer.Typer(
 
 _ROOT = typer.Option(Path("."), "--root", "-r", help="Project root", hidden=True)
 _JSON = typer.Option(False, "--json", help="JSON output")
-_YES  = typer.Option(False, "--yes", "-y", help="Skip prompts")
+_YES = typer.Option(False, "--yes", "-y", help="Skip prompts")
 
 
 @app.callback(invoke_without_command=True)
@@ -54,12 +65,19 @@ def _default(
 
 # ── Lifecycle ────────────────────────────────────────────────
 
+
 @app.command(rich_help_panel="Lifecycle")
 def init(
-    folder: Optional[str] = typer.Argument(None, help="Folder name (greenfield). Omit to init current dir."),
-    project_type: str = typer.Option("blank", "--type", "-t", help="blank, python-api, typescript-web, cli-tool"),
+    folder: Optional[str] = typer.Argument(
+        None, help="Folder name (greenfield). Omit to init current dir."
+    ),
+    project_type: str = typer.Option(
+        "blank", "--type", "-t", help="blank, python-api, typescript-web, cli-tool"
+    ),
     author: str = typer.Option("", "--author", "-a"),
-    spec_only: bool = typer.Option(False, "--spec-only", help="Only .spec/, skip agents + CLAUDE.md"),
+    spec_only: bool = typer.Option(
+        False, "--spec-only", help="Only .spec/, skip agents + CLAUDE.md"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
@@ -74,7 +92,9 @@ def init(
 @app.command(rich_help_panel="Lifecycle")
 def new(
     title: str = typer.Argument("", help="Spec title"),
-    template: Optional[str] = typer.Option(None, "--template", "-t", help="feature | bug | adr | api"),
+    template: Optional[str] = typer.Option(
+        None, "--template", "-t", help="feature | bug | adr | api"
+    ),
     author: Optional[str] = typer.Option(None, "--author", "-a"),
     tags: Optional[str] = typer.Option(None, "--tags", help="Comma-separated"),
     ai: bool = typer.Option(False, "--ai", help="Draft with AI"),
@@ -90,13 +110,17 @@ def new(
 def advance(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
     note: Optional[str] = typer.Option(None, "--note", "-n", help="Required at gate transitions"),
-    skip_checks: bool = typer.Option(False, "--skip-checks", help="Skip pre-gate checks (requires --note explaining why)"),
+    skip_checks: bool = typer.Option(
+        False, "--skip-checks", help="Skip pre-gate checks (requires --note explaining why)"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Advance to next state: draft → approved → in-progress → at-gate → implemented"""
-    cmd_advance(spec_id, note, yes, json_out, root, skip_checks=skip_checks, skip_checks_reason=note or "")
+    cmd_advance(
+        spec_id, note, yes, json_out, root, skip_checks=skip_checks, skip_checks_reason=note or ""
+    )
 
 
 @app.command(rich_help_panel="Lifecycle")
@@ -112,9 +136,69 @@ def revert(
 
 
 @app.command(rich_help_panel="Lifecycle")
+def approve(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    yes: bool = _YES,
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Approve a draft spec: draft → approved."""
+    cmd_approve(spec_id, yes, json_out, root)
+
+
+@app.command(rich_help_panel="Lifecycle")
+def deliver(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    note: Optional[str] = typer.Option(
+        None, "--note", "-n", help="Delivery receipt for the human gate"
+    ),
+    skip_checks: bool = typer.Option(
+        False, "--skip-checks", help="Skip pre-gate checks (requires --note explaining why)"
+    ),
+    yes: bool = _YES,
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Deliver implemented work to the human gate: in-progress → at-gate."""
+    cmd_deliver(spec_id, note, yes, json_out, root, skip_checks)
+
+
+@app.command("pass", rich_help_panel="Lifecycle")
+def pass_gate(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    note: Optional[str] = typer.Option(None, "--note", "-n", help="What the human verified"),
+    yes: bool = _YES,
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Pass the human gate: at-gate → implemented."""
+    cmd_pass(spec_id, note, yes, json_out, root)
+
+
+@app.command(rich_help_panel="Lifecycle")
+def reject(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    note: Optional[str] = typer.Option(None, "--note", "-n", help="What failed at the gate"),
+    category: str = typer.Option(
+        "", "--category", help="Correction category, e.g. missed-ac or weak-tests"
+    ),
+    correction: str = typer.Option(
+        "", "--correction", help="Reusable correction for harness improvement"
+    ),
+    yes: bool = _YES,
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Reject the human gate and send work back: at-gate → in-progress."""
+    cmd_reject(spec_id, note, category, correction, yes, json_out, root)
+
+
+@app.command(rich_help_panel="Lifecycle")
 def close(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
-    reason: str = typer.Option(..., "--reason", help="descoped | wont-fix | superseded | duplicate"),
+    reason: str = typer.Option(
+        ..., "--reason", help="descoped | wont-fix | superseded | duplicate"
+    ),
     note: Optional[str] = typer.Option(None, "--note", "-n", help="Explain why"),
     yes: bool = _YES,
     json_out: bool = _JSON,
@@ -147,7 +231,19 @@ def assign(
     cmd_assign(spec_id, assignee, json_out, root)
 
 
+@app.command(rich_help_panel="Lifecycle")
+def route(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    agent: str = typer.Argument("", help="Suggested agent role, empty for any"),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Route a spec to an agent role without claiming it."""
+    cmd_route(spec_id, agent, json_out, root)
+
+
 # ── View ─────────────────────────────────────────────────────
+
 
 @app.command("list", rich_help_panel="View")
 def list_specs(
@@ -156,11 +252,12 @@ def list_specs(
     full: bool = typer.Option(False, "--full", help="Include spec body in JSON output"),
     assignee: Optional[str] = typer.Option(None, "--assignee", "-a", help="Filter by assignee"),
     claimable: bool = typer.Option(False, "--claimable", help="Only show unclaimed approved specs"),
+    agent: Optional[str] = typer.Option(None, "--agent", help="Filter by suggested agent role"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """List all specs."""
-    cmd_list(status, stale, json_out, root, full, assignee, claimable)
+    cmd_list(status, stale, json_out, root, full, assignee, claimable, agent)
 
 
 @app.command(rich_help_panel="View")
@@ -176,11 +273,42 @@ def show(
 
 @app.command("next", rich_help_panel="View")
 def next_action(
+    agent: str = typer.Option("", "--agent", help="Agent role asking for work"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Show the most important thing to do right now."""
-    cmd_next(json_out, root)
+    cmd_next(json_out, root, agent)
+
+
+@app.command(rich_help_panel="View")
+def boot(
+    agent: str = typer.Option("", "--agent", help="Agent role asking for work"),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Small startup packet for coding agents."""
+    cmd_boot(agent, json_out, root)
+
+
+@app.command(rich_help_panel="View")
+def context(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Focused task packet for one spec."""
+    cmd_context(spec_id, json_out, root)
+
+
+@app.command(rich_help_panel="View")
+def gate(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Human gate review packet."""
+    cmd_gate(spec_id, json_out, root)
 
 
 @app.command(rich_help_panel="View")
@@ -212,6 +340,23 @@ def search(
     cmd_search(query, status, json_out, root)
 
 
+@app.command("corrections", rich_help_panel="View")
+def corrections(
+    category: Optional[str] = typer.Option(
+        None, "--category", help="Filter by correction category"
+    ),
+    agent: Optional[str] = typer.Option(None, "--agent", help="Filter by agent role"),
+    last: int = typer.Option(50, "--last", "-n", help="Number of corrections to inspect"),
+    suggest: bool = typer.Option(
+        False, "--suggest", help="Suggest harness improvements from patterns"
+    ),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Show human correction patterns for harness improvement."""
+    cmd_corrections(category, agent, last, suggest, json_out, root)
+
+
 @app.command("log", rich_help_panel="View")
 def log(
     last: int = typer.Option(20, "--last", "-n", help="Number of entries to show"),
@@ -225,6 +370,19 @@ def log(
 
 
 # ── Quality ──────────────────────────────────────────────────
+
+
+@app.command("correction", rich_help_panel="Quality")
+def correction(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    category: str = typer.Option("human-preference", "--category", help="Correction category"),
+    note: str = typer.Option(..., "--note", "-n", help="Human correction text"),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Log a human correction without changing lifecycle state."""
+    cmd_correction(spec_id, category, note, json_out, root)
+
 
 @app.command(rich_help_panel="Quality")
 def validate(
@@ -267,6 +425,7 @@ def run_checks(
 
 
 # ── Setup ────────────────────────────────────────────────────
+
 
 @app.command(rich_help_panel="Setup")
 def edit(

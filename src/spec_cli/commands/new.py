@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -13,6 +14,17 @@ from ..ui import console, err_console, success, error
 
 AVAILABLE_TEMPLATES = ["feature", "bug", "adr", "api", "data-pipeline", "experiment"]
 
+_AGENT_RE = re.compile(r"\*\*Suggested agent:\*\*\s*([^\n]+)", re.IGNORECASE)
+_CONTEXT_MODE_RE = re.compile(r"\*\*Context mode:\*\*\s*([^\n]+)", re.IGNORECASE)
+
+
+def _agent_metadata(body: str) -> tuple[str, str]:
+    agent_match = _AGENT_RE.search(body)
+    mode_match = _CONTEXT_MODE_RE.search(body)
+    agent = agent_match.group(1).strip() if agent_match else ""
+    context_mode = mode_match.group(1).strip() if mode_match else "focused"
+    return agent, context_mode
+
 
 def _load_template(name: str) -> str:
     path = Path(__file__).parent.parent / "templates" / f"{name}.md"
@@ -21,19 +33,34 @@ def _load_template(name: str) -> str:
 
 def _prompt_style():
     import questionary
-    return questionary.Style([
-        ("question", "bold cyan"), ("answer", "bold white"),
-        ("pointer", "bold yellow"), ("selected", "bold green"),
-    ])
+
+    return questionary.Style(
+        [
+            ("question", "bold cyan"),
+            ("answer", "bold white"),
+            ("pointer", "bold yellow"),
+            ("selected", "bold green"),
+        ]
+    )
 
 
 def cmd_new(
-    title: str, template: Optional[str], author: Optional[str],
-    tags: Optional[str], yes: bool, json_out: bool, ai: bool, root: Path,
+    title: str,
+    template: Optional[str],
+    author: Optional[str],
+    tags: Optional[str],
+    yes: bool,
+    json_out: bool,
+    ai: bool,
+    root: Path,
 ) -> None:
     root = find_root(root)
     if not (root / ".spec").exists():
-        error("Not initialized. Run [cyan]spec init[/cyan] first.", json_out, {"error": "not_initialized"})
+        error(
+            "Not initialized. Run [cyan]spec init[/cyan] first.",
+            json_out,
+            {"error": "not_initialized"},
+        )
 
     cfg = load_config(root)
     resolved_template = template or cfg.default_template
@@ -45,6 +72,7 @@ def cmd_new(
 
     if not yes:
         import questionary
+
         style = _prompt_style()
 
         if not title:
@@ -52,9 +80,15 @@ def cmd_new(
             if not title:
                 raise typer.Exit(0)
 
-        resolved_template = questionary.select(
-            "Template:", choices=AVAILABLE_TEMPLATES, default=resolved_template, style=style,
-        ).ask() or resolved_template
+        resolved_template = (
+            questionary.select(
+                "Template:",
+                choices=AVAILABLE_TEMPLATES,
+                default=resolved_template,
+                style=style,
+            ).ask()
+            or resolved_template
+        )
 
         tags_raw = questionary.text("Tags (comma-separated, optional):", style=style).ask() or ""
         resolved_tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
@@ -63,7 +97,9 @@ def cmd_new(
             resolved_author = questionary.text("Author (optional):", style=style).ask() or ""
 
         if not ai:
-            use_ai = questionary.confirm("Generate draft with AI?", default=False, style=style).ask()
+            use_ai = questionary.confirm(
+                "Generate draft with AI?", default=False, style=style
+            ).ask()
     else:
         if tags:
             resolved_tags = [t.strip() for t in tags.split(",") if t.strip()]
@@ -72,10 +108,15 @@ def cmd_new(
     if use_ai:
         try:
             from ..integrations.ai import draft_spec_content
+
             with console.status(f"[cyan]Drafting via {cfg.ai_provider}...[/cyan]", spinner="dots"):
                 body = draft_spec_content(
-                    title, resolved_template, context=cfg.context_summary(),
-                    provider=cfg.ai_provider, model=cfg.ai_model, base_url=cfg.ai_base_url,
+                    title,
+                    resolved_template,
+                    context=cfg.context_summary(),
+                    provider=cfg.ai_provider,
+                    model=cfg.ai_model,
+                    base_url=cfg.ai_base_url,
                 )
         except Exception as e:
             err_console.print(f"[yellow]AI draft failed:[/yellow] {e}\n[dim]Using template.[/dim]")
@@ -84,7 +125,17 @@ def cmd_new(
         body = _load_template(resolved_template)
 
     spec_id = next_id(root)
-    spec = Spec(id=spec_id, title=title, template=resolved_template, author=resolved_author, tags=resolved_tags, body=body)
+    agent, context_mode = _agent_metadata(body)
+    spec = Spec(
+        id=spec_id,
+        title=title,
+        template=resolved_template,
+        author=resolved_author,
+        tags=resolved_tags,
+        body=body,
+        agent=agent,
+        context_mode=context_mode,
+    )
     path = save_spec(spec, root)
     append_log(root, f"`{spec_id}` **{title}** created (template: {resolved_template})")
 
@@ -92,6 +143,7 @@ def cmd_new(
     if cfg.git_auto_commit:
         try:
             from ..integrations.git import auto_commit_new
+
             git_sha = auto_commit_new(root, spec_id, title, resolved_template)
         except Exception:
             pass
@@ -104,11 +156,14 @@ def cmd_new(
     else:
         icon, color = STATUS_STYLE[SpecStatus.DRAFT]
         git_line = f"\n  Git      : [green]{git_sha}[/green]" if git_sha else ""
-        success("Spec created", (
-            f"[bold]{spec_id}[/bold] — {title}\n\n"
-            f"  Template : [cyan]{resolved_template}[/cyan]\n"
-            f"  Status   : [{color}]{icon} draft[/{color}]\n"
-            f"  File     : [dim]{path.relative_to(root)}[/dim]"
-            f"{git_line}\n\n"
-            f"  [dim]Next:[/dim] [cyan]spec advance {spec_id}[/cyan]"
-        ))
+        success(
+            "Spec created",
+            (
+                f"[bold]{spec_id}[/bold] — {title}\n\n"
+                f"  Template : [cyan]{resolved_template}[/cyan]\n"
+                f"  Status   : [{color}]{icon} draft[/{color}]\n"
+                f"  File     : [dim]{path.relative_to(root)}[/dim]"
+                f"{git_line}\n\n"
+                f"  [dim]Next:[/dim] [cyan]spec advance {spec_id}[/cyan]"
+            ),
+        )

@@ -63,11 +63,14 @@ spec new "User authentication with JWT" --template feature --ai
 # See what's in flight
 spec dashboard
 
-# Advance through the lifecycle
-spec advance 0001          # draft → approved
-spec advance 0001          # approved → in-progress
-spec advance 0001 --note "Needs PM sign-off on rate limiting"   # → at-gate
-spec advance 0001 --note "All criteria verified, tests green"   # → implemented
+# Agent-first lifecycle
+spec approve 0001          # human: draft → approved
+spec claim 0001 --as claude-code --yes --json   # agent: approved → in-progress
+spec context 0001 --json   # agent: focused task packet
+spec deliver 0001 --note "Implemented JWT auth; tests pass" --yes --json  # agent → at-gate
+spec gate 0001             # human: review packet
+spec pass 0001 --note "Verified tests, happy path, failure path, diff"     # human → implemented
+# or: spec reject 0001 --note "Expired token returns 500" --category missed-ac --correction "Agent missed failure AC"
 ```
 
 ---
@@ -80,11 +83,21 @@ spec advance 0001 --note "All criteria verified, tests green"   # → implemente
 | `spec new "title"` | Create a spec (interactive or `--ai` for AI draft) |
 | `spec list` | List all specs, filterable by `--status` |
 | `spec show 0001` | Show a spec in full |
-| `spec advance 0001` | Move to next state (auto-detects transition) |
+| `spec approve 0001` | Human approves a draft spec |
+| `spec claim 0001` | Agent atomically claims approved work |
+| `spec context 0001` | Focused task packet for the agent |
+| `spec deliver 0001 --note "..."` | Agent hands work to the human gate |
+| `spec gate 0001` | Human gate review packet |
+| `spec pass 0001 --note "..."` | Human passes the gate |
+| `spec reject 0001 --note "..."` | Human rejects gate and sends work back |
+| `spec advance 0001` | Advanced: move to next state directly |
 | `spec revert 0001` | Send back to draft |
 | `spec edit 0001` | Open spec in `$EDITOR` |
+| `spec boot --json` | Small startup packet for coding agents |
 | `spec next` | Show the most important thing to do right now |
-| `spec gate-check 0001` | Show the Human Gate Checklist for a spec |
+| `spec gate-check 0001` | Show only the Human Gate Checklist for a spec |
+| `spec correction 0001 --category missed-ac --note "..."` | Log a human correction for harness improvement |
+| `spec corrections --suggest` | Show repeated correction patterns and suggested prompt/check fixes |
 | `spec sync` | Commit all `.spec/` changes to git |
 | `spec list --stale` | Show specs stuck for 3+ days |
 | `spec dashboard` | Pipeline dashboard with aging alerts |
@@ -112,7 +125,7 @@ Every spec template includes a `## Human Gate Checklist` section. When the AI im
 
 When you create specs with `--ai`, the AI fills in **real commands and scenarios** specific to your feature — not generic placeholders.
 
-You can view the checklist anytime with `spec gate-check <id>`.
+You can view the full human review packet with `spec gate <id>`, or only the checklist with `spec gate-check <id>`.
 
 ---
 

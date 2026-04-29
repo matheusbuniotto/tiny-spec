@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import frontmatter
 
@@ -67,6 +67,9 @@ def save_spec(spec: Spec, root: Path) -> Path:
     meta = {
         "id": spec.id,
         "title": spec.title,
+        "summary": spec.summary,
+        "agent": spec.agent,
+        "context_mode": spec.context_mode,
         "status": spec.status.value,
         "created_at": spec.created_at.isoformat(),
         "updated_at": spec.updated_at.isoformat(),
@@ -91,7 +94,7 @@ def _find_file_by_id(spec_id: str, root: Path) -> Optional[Path]:
 
 def load_spec(path: Path) -> Spec:
     post = frontmatter.load(str(path))
-    data = dict(post.metadata)
+    data: dict[str, Any] = dict(post.metadata)
     data["body"] = post.content
     data["file_path"] = str(path)
 
@@ -144,6 +147,7 @@ def find_spec(root: Path, id_or_prefix: str) -> Optional[Spec]:
 
 
 # ── Event log ────────────────────────────────────────────────────────────────
+
 
 def append_log(root: Path, entry: str) -> None:
     """Append a timestamped entry to .spec/log.md."""

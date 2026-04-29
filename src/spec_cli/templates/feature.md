@@ -20,6 +20,21 @@
 - [ ] **AC2**: [Edge case or error path explicitly covered]
 - [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
 
+## Agent Routing & Context
+
+**Suggested agent:** implementer
+
+**Context mode:** focused
+
+**Required files:**
+- 
+
+**Related specs:**
+- 
+
+**Out of bounds for agent:**
+- 
+
 ## Technical Notes
 
 > Architecture decisions, chosen approach, and constraints.

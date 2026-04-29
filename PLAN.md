@@ -113,7 +113,7 @@ spec claim <id> --as "my-agent" --yes --json  # specify agent name (default: $SP
 spec next --json                                   # 1. find what's available (check assignee + claimable_queue)
 spec claim <id> --yes --json                      # 2. atomic claim (validates status, idempotent)
 # ... do the work ...
-spec run-kata --json                               # 3. katas must pass
+spec run-checks --json                               # 3. checks must pass
 spec advance <id> --note "<delivery summary>" --yes --json  # 4. DELIVERY SIGNAL (in-progress → at-gate)
 # Note is the delivery receipt — be specific:
 # "Implemented X. Tests: 12 pass. Edge case Y handled in file.py:42."

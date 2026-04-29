@@ -20,37 +20,40 @@ CLOSE_REASONS = ("descoped", "wont-fix", "superseded", "duplicate")
 
 # Status display: (icon, rich color)
 STATUS_STYLE: dict[SpecStatus, tuple[str, str]] = {
-    SpecStatus.DRAFT:        ("⬡", "yellow"),
-    SpecStatus.APPROVED:     ("◉", "bright_blue"),
-    SpecStatus.IN_PROGRESS:  ("▶", "cyan"),
-    SpecStatus.AT_GATE:      ("⏸", "magenta"),
-    SpecStatus.IMPLEMENTED:  ("✓", "bright_green"),
-    SpecStatus.CLOSED:       ("✕", "dim"),
+    SpecStatus.DRAFT: ("⬡", "yellow"),
+    SpecStatus.APPROVED: ("◉", "bright_blue"),
+    SpecStatus.IN_PROGRESS: ("▶", "cyan"),
+    SpecStatus.AT_GATE: ("⏸", "magenta"),
+    SpecStatus.IMPLEMENTED: ("✓", "bright_green"),
+    SpecStatus.CLOSED: ("✕", "dim"),
 }
 
 # Valid state transitions
 TRANSITIONS: dict[SpecStatus, list[SpecStatus]] = {
-    SpecStatus.DRAFT:        [SpecStatus.APPROVED],
-    SpecStatus.APPROVED:     [SpecStatus.IN_PROGRESS, SpecStatus.DRAFT],
-    SpecStatus.IN_PROGRESS:  [SpecStatus.AT_GATE, SpecStatus.APPROVED],
-    SpecStatus.AT_GATE:      [SpecStatus.IMPLEMENTED, SpecStatus.IN_PROGRESS],
-    SpecStatus.IMPLEMENTED:  [],
-    SpecStatus.CLOSED:       [],
+    SpecStatus.DRAFT: [SpecStatus.APPROVED],
+    SpecStatus.APPROVED: [SpecStatus.IN_PROGRESS, SpecStatus.DRAFT],
+    SpecStatus.IN_PROGRESS: [SpecStatus.AT_GATE, SpecStatus.APPROVED],
+    SpecStatus.AT_GATE: [SpecStatus.IMPLEMENTED, SpecStatus.IN_PROGRESS],
+    SpecStatus.IMPLEMENTED: [],
+    SpecStatus.CLOSED: [],
 }
 
 TRANSITION_LABELS: dict[SpecStatus, str] = {
-    SpecStatus.APPROVED:     "approve",
-    SpecStatus.IN_PROGRESS:  "start",
-    SpecStatus.AT_GATE:      "gate",
-    SpecStatus.IMPLEMENTED:  "pass",
-    SpecStatus.DRAFT:        "revert to draft",
-    SpecStatus.CLOSED:       "close",
+    SpecStatus.APPROVED: "approve",
+    SpecStatus.IN_PROGRESS: "start",
+    SpecStatus.AT_GATE: "gate",
+    SpecStatus.IMPLEMENTED: "pass",
+    SpecStatus.DRAFT: "revert to draft",
+    SpecStatus.CLOSED: "close",
 }
 
 
 class Spec(BaseModel):
     id: str
     title: str
+    summary: str = ""
+    agent: str = ""
+    context_mode: str = "focused"
     status: SpecStatus = SpecStatus.DRAFT
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -79,6 +82,9 @@ class Spec(BaseModel):
         d = {
             "id": self.id,
             "title": self.title,
+            "summary": self.summary,
+            "agent": self.agent,
+            "context_mode": self.context_mode,
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),

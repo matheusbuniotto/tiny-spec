@@ -4,6 +4,39 @@
 
 ## Recent changes
 
+### Session 8: Agent-first harness protocol + correction memory
+
+**Branch:** `tidy-up-new-feats`
+
+Added the first grug-sized slice of the agentic harness:
+- Explicit role-intent lifecycle commands:
+  - `spec approve` — human approval (`draft → approved`)
+  - `spec deliver` — agent delivery signal (`in-progress → at-gate`)
+  - `spec pass` — human gate pass (`at-gate → implemented`)
+  - `spec reject` — human gate rejection (`at-gate → in-progress`)
+- Agent protocol/context commands:
+  - `spec boot --agent <role> --json` — small startup packet, no full context dump
+  - `spec context <id> --json` — focused task packet for one claimed spec
+  - `spec gate <id>` — human review packet with AC, delivery note, checklist, pass/reject commands
+  - `spec route <id> <agent>` — suggested agent role separate from runtime assignee
+- Correction memory:
+  - `.spec/corrections.jsonl`
+  - `spec correction` for manual human correction logging
+  - `spec corrections --suggest` for repeated-pattern summaries and harness improvement suggestions
+  - `spec reject --category ... --correction ...` logs correction data automatically
+- Spec metadata:
+  - `summary`
+  - `agent`
+  - `context_mode`
+- Feature template now includes `Agent Routing & Context`.
+- Docs/skills updated away from stale `run-kata` / missing `spec review` references.
+
+Verification:
+- `uv run spec --help`
+- Smoke lifecycle in temp project: init → new → approve → boot → claim → context → deliver → gate → reject → corrections
+- Smoke pass path: init → new → approve → claim → deliver → pass
+- Ruff on changed Python files: green
+
 ### Session 7: SKILL.md + Agent Overhaul
 
 **SKILL.md** (the slash command for tech leads) — fully rewritten:
@@ -59,7 +92,7 @@
 - `spec list --assignee <name>` filters to one person/agent
 - Assignee column appears in list only when any spec has one (no wasted space)
 
-**`spec review <id>`** — AI pre-flight before approval
+**`spec validate <id>`** — deterministic spec quality check before approval
 - Runs against project context + constitution
 - Checks: title quality, measurable AC, out-of-scope, constitution compliance, gate checklist specificity
 - Returns APPROVE / NEEDS WORK / REJECT verdict with specific citations
@@ -103,9 +136,9 @@
 
 **Kata harness — mandatory pre-gate verification**
 - New `katas:` key in `.spec/config.yaml` — list of `{name, command, description}` objects
-- `spec run-kata [id] [--json]` — runs all katas, exits 1 on any failure
+- `spec run-checks [id] [--json]` — runs all checks, exits 1 on any failure
 - `spec advance` into `at-gate` automatically runs katas and blocks if any fail
-- Override: `spec advance <id> --skip-kata --note "reason"` (requires explicit note)
+- Override: `spec advance <id> --skip-checks --note "reason"` (requires explicit note)
 - Katas appear in `context_summary()` so AI drafts know what checks exist
 
 **`spec list --full` — body in JSON output**
@@ -115,7 +148,7 @@
 
 **`claude_md.py` — stays in sync with real CLI**
 - Full command reference with `--json`/`--yes` flags as agents use them
-- Added: `spec close`, `spec run-kata`, `spec git-context`, `spec list --full`, `spec next`
+- Added: `spec close`, `spec run-checks`, `spec git-context`, `spec list --full`, `spec next`
 - Added: kata and closed lifecycle to workflow section
 
 **`spec-manager` agent — rewritten with real commands**
@@ -129,7 +162,7 @@
 - `src/spec_cli/config.py` — `Kata` dataclass, `katas` field, `context_summary` update
 - `src/spec_cli/commands/close.py` — NEW
 - `src/spec_cli/commands/kata.py` — NEW
-- `src/spec_cli/commands/lifecycle.py` — kata enforcement in `_do_transition`, `--skip-kata`
+- `src/spec_cli/commands/lifecycle.py` — check enforcement in `_do_transition`, `--skip-checks`
 - `src/spec_cli/commands/list_cmd.py` — `--full`, closed/stale exclusion fix
 - `src/spec_cli/commands/dashboard.py` — closed exclusion in stale/badge
 - `src/spec_cli/commands/show.py` — removed redundant body assignment
@@ -138,7 +171,7 @@
 - `src/spec_cli/commands/greenfield.py` — katas section in config template
 - `src/spec_cli/scaffold/claude_md.py` — full command reference update
 - `src/spec_cli/scaffold/agents.py` — spec-manager rewritten
-- `src/spec_cli/main.py` — registered close, run-kata; added --skip-kata, --full
+- `src/spec_cli/main.py` — registered close, run-checks; added --skip-checks, --full
 
 ### Session 4: Template Overhaul
 

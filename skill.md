@@ -3,7 +3,7 @@ name: spec
 description: >
   Drive the full tiny-spec lifecycle from Claude Code. Use when the user says
   "spec this", "add to specs", "what's in flight", "review that spec",
-  "what's blocking", "assign this", "search specs", "run katas",
+  "what's blocking", "assign this", "search specs", "run checks",
   "what's the pipeline health", or anything about spec status, lifecycle,
   search, stats, or assignment.
 ---
@@ -16,12 +16,15 @@ Never invent commands — only use what's listed here.
 ## Bootstrap (start of every session)
 
 ```bash
-spec config --json          # project stack, conventions, katas, out_of_bounds
-spec export --active --json # all active specs with bodies + constitution + git history
-spec next --json            # single highest-priority action right now
+spec boot --json                    # small agent packet: rules, next action, claimable queue
+spec boot --agent implementer --json # role-specific queue when acting as an implementer
 ```
 
-Run these three before doing anything else in a new session. They give you full context in ~3 commands.
+After claiming work, load focused context only:
+
+```bash
+spec context <id> --json
+```
 
 ---
 
@@ -45,13 +48,24 @@ spec list --status in-progress --json
 spec list --status at-gate --json
 spec list --full --json                              # includes spec bodies
 spec list --assignee "alice" --json                 # filter by owner
+spec list --agent implementer --json                # filter by suggested agent role
 spec list --stale --json                            # stuck 3+ days
 spec show <id> --json
+spec context <id> --json                            # focused task packet
+spec gate <id> --json                               # human review packet
 
-# Advance
-spec advance <id> --yes --json                      # auto-detects next state
-spec advance <id> --note "what to verify" --yes --json   # required for at-gate
-spec advance <id> --skip-kata --note "reason" --yes --json  # override kata check
+# Role-intent lifecycle
+spec approve <id> --yes --json                      # human: draft → approved
+spec route <id> implementer --json                  # set suggested agent role
+spec claim <id> --yes --json                        # agent: approved → assigned → in-progress
+spec deliver <id> --note "delivery receipt" --yes --json  # agent: in-progress → at-gate
+spec pass <id> --note "what was verified" --yes --json    # human only: at-gate → implemented
+spec reject <id> --note "what failed" --category missed-ac --correction "reusable lesson" --yes --json
+
+# Advanced escape hatch
+spec advance <id> --yes --json
+spec advance <id> --note "what to verify" --yes --json
+spec advance <id> --skip-checks --note "reason" --yes --json
 
 # Revert / close
 spec revert <id> --note "why" --yes --json
@@ -60,14 +74,10 @@ spec close <id> --reason wont-fix --note "why" --yes --json
 spec close <id> --reason superseded --note "replaced by <id>" --yes --json
 spec close <id> --reason duplicate --note "same as <id>" --yes --json
 
-# Assign
-spec assign <id> "alice" --json
-spec assign <id> "claude-implementer" --json
+# Assign / claim
+spec assign <id> "alice" --json                     # owner/person/runtime
 spec assign <id> "" --json                          # unassign
-
-# Claim (agent atomic pickup)
-spec claim <id> --yes --json                        # assert approved → assign → in-progress
-spec claim <id> --as "my-agent" --yes --json        # specify agent name (default: $SPEC_AGENT or "agent")
+spec claim <id> --as "my-agent" --yes --json        # specify runtime name (default: $SPEC_AGENT or "agent")
 ```
 
 ### Discovery & search
@@ -76,7 +86,9 @@ spec claim <id> --as "my-agent" --yes --json        # specify agent name (defaul
 spec search "payment retry" --json
 spec search "schema migration" --status in-progress --json
 spec stats --json                                   # pipeline health object
+spec boot --json                                    # agent startup packet
 spec next --json                                    # top priority action (includes assignee + claimable_queue)
+spec next --agent implementer --json                # top priority for a role
 spec list --claimable --json                        # only unclaimed approved specs — ready to pick up
 spec log --last 20 --json
 spec log --spec <id> --json                         # history for one spec
@@ -87,10 +99,12 @@ spec log --query "gate" --json
 
 ```bash
 spec setup-checks --yes --json  # scan project, auto-configure pre-gate checks
-spec review <id> --json         # AI pre-flight: APPROVE / NEEDS WORK / REJECT
-spec gate-check <id> --json     # show Human Gate Checklist
-spec run-kata --json            # run all katas, exit 1 on failure
-spec run-kata <id> --json       # same, scoped to a spec for context
+spec gate <id> --json           # full human review packet
+spec gate-check <id> --json     # checklist only
+spec run-checks --json          # run all checks, exit 1 on failure
+spec run-checks <id> --json     # same, scoped to a spec for context
+spec correction <id> --category missed-ac --note "lesson" --json
+spec corrections --suggest --json
 ```
 
 ### Context & git
@@ -123,7 +137,7 @@ draft → approved → in-progress → at-gate → implemented
 ```
 
 - `at-gate → implemented` always requires a human. Never pass this yourself without explicit confirmation.
-- Katas (if configured) block `in-progress → at-gate` automatically.
+- Checks (if configured) block `in-progress → at-gate` automatically.
 
 ---
 
@@ -133,8 +147,8 @@ draft → approved → in-progress → at-gate → implemented
 spec config --json                                          # 1. get context
 spec new "<title>" --template feature --ai --yes --json    # 2. AI draft
 spec show <id> --json                                       # 3. read it back
-spec review <id> --json                                     # 4. pre-flight check
-# if verdict is APPROVE or NEEDS WORK with minor issues, show user and ask
+spec validate <id> --json                                   # 4. deterministic quality check
+# if validation passes, show user and ask
 spec advance <id> --yes --json                             # 5. draft → approved (after user OK)
 ```
 
@@ -145,7 +159,7 @@ spec next --json                                             # 1. find top actio
 spec list --claimable --json                                 # (optional) browse all unclaimed approved specs
 spec claim <id> --yes --json                                 # 2. atomic claim: assert approved, assign, start
 # ... implement the work ...
-spec run-kata --json                                         # 3. katas must pass before gating
+spec run-checks --json                                         # 3. checks must pass before gating
 spec advance <id> --note "<delivery summary>" --yes --json  # 4. DELIVERY SIGNAL: in-progress → at-gate
 # The --note is the delivery receipt the human will read. Be specific:
 # "Implemented X. Tests: 12 pass. Edge case Y handled in file.py:42."
@@ -200,10 +214,10 @@ spec setup-checks --yes --json         # scans for pytest/ruff/mypy/eslint/tsc/c
 ## Workflow: "run the checks before gating"
 
 ```bash
-spec run-kata <id> --json              # run katas, exit 1 on failure
+spec run-checks <id> --json              # run checks, exit 1 on failure
 # on failure: fix, then re-run
 # to skip with justification:
-spec advance <id> --skip-kata --note "<reason>" --yes --json
+spec advance <id> --skip-checks --note "<reason>" --yes --json
 ```
 
 ## Workflow: "give me full context for this project" (new AI session)

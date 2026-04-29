@@ -10,22 +10,31 @@ from rich.panel import Panel
 from rich.rule import Rule
 from rich import box
 
-from ..models import SpecStatus, STATUS_STYLE, TRANSITIONS, TRANSITION_LABELS
+from ..models import SpecStatus, STATUS_STYLE
 from ..storage import find_spec, find_root
 from ..ui import console, error
 
-_STAGE_ORDER = list(SpecStatus)
+_STAGE_ORDER = [
+    SpecStatus.DRAFT,
+    SpecStatus.APPROVED,
+    SpecStatus.IN_PROGRESS,
+    SpecStatus.AT_GATE,
+    SpecStatus.IMPLEMENTED,
+]
 
 _NEXT_ACTIONS: dict[SpecStatus, str] = {
-    SpecStatus.DRAFT:       "Review and approve → [cyan]spec advance {id}[/cyan]",
-    SpecStatus.APPROVED:    "Start implementation → [cyan]spec advance {id}[/cyan]",
-    SpecStatus.IN_PROGRESS: "Finish and gate → [cyan]spec advance {id} --note \"...\"[/cyan]",
-    SpecStatus.AT_GATE:     "Verify the gate checklist → [cyan]spec gate-check {id}[/cyan] then [cyan]spec advance {id} --note \"...\"[/cyan]",
+    SpecStatus.DRAFT: "Review and approve → [cyan]spec approve {id}[/cyan]",
+    SpecStatus.APPROVED: "Start implementation → [cyan]spec claim {id}[/cyan]",
+    SpecStatus.IN_PROGRESS: 'Deliver to gate → [cyan]spec deliver {id} --note "..."[/cyan]',
+    SpecStatus.AT_GATE: 'Review gate → [cyan]spec gate {id}[/cyan] then [cyan]spec pass {id} --note "..."[/cyan] or [cyan]spec reject {id} --note "..."[/cyan]',
     SpecStatus.IMPLEMENTED: "[dim]Done — no further action[/dim]",
+    SpecStatus.CLOSED: "[dim]Closed — no further action[/dim]",
 }
 
 
 def _progress_bar(status: SpecStatus) -> str:
+    if status == SpecStatus.CLOSED:
+        return "[dim]✕ closed[/dim]"
     stages = _STAGE_ORDER
     idx = stages.index(status)
     parts = []
@@ -62,7 +71,9 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
         return
 
     icon, color = STATUS_STYLE[spec.status]
-    tags_str = "  ".join(f"[dim]#{t}[/dim]" for t in spec.tags) if spec.tags else "[dim](none)[/dim]"
+    tags_str = (
+        "  ".join(f"[dim]#{t}[/dim]" for t in spec.tags) if spec.tags else "[dim](none)[/dim]"
+    )
 
     progress = _progress_bar(spec.status)
     next_action = _NEXT_ACTIONS[spec.status].format(id=spec.id)
@@ -82,13 +93,17 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
     if spec.gate_notes:
         meta += f"\n\n[dim]Gate notes:[/dim]\n[dim]{spec.gate_notes}[/dim]"
 
-    console.print(Panel(meta, title=f"[bold]{spec.title}[/bold]", box=box.ROUNDED, border_style=color))
+    console.print(
+        Panel(meta, title=f"[bold]{spec.title}[/bold]", box=box.ROUNDED, border_style=color)
+    )
 
     if full:
         console.print()
         console.print(Markdown(spec.body))
         console.print(Rule(style="dim"))
     else:
-        console.print(f"[dim]Use [cyan]spec show {spec.id} --full[/cyan] to see the full spec body[/dim]")
+        console.print(
+            f"[dim]Use [cyan]spec show {spec.id} --full[/cyan] to see the full spec body[/dim]"
+        )
 
     console.print(f"[dim]{spec.file_path}[/dim]")

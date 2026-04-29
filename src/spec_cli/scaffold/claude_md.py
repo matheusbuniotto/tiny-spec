@@ -1,4 +1,5 @@
 """Generate CLAUDE.md from project config and constitution."""
+
 from __future__ import annotations
 
 from ..config import Config
@@ -12,8 +13,12 @@ def generate_claude_md(cfg: Config, project_name: str) -> str:
     libraries = ", ".join(cfg.libraries) if cfg.libraries else "—"
     testing = cfg.testing or "—"
     architecture = cfg.architecture or "—"
-    conventions = "\n".join(f"- {c}" for c in cfg.conventions) if cfg.conventions else "- (none defined)"
-    out_of_bounds = "\n".join(f"- {c}" for c in cfg.out_of_bounds) if cfg.out_of_bounds else "- (none defined)"
+    conventions = (
+        "\n".join(f"- {c}" for c in cfg.conventions) if cfg.conventions else "- (none defined)"
+    )
+    out_of_bounds = (
+        "\n".join(f"- {c}" for c in cfg.out_of_bounds) if cfg.out_of_bounds else "- (none defined)"
+    )
 
     return f"""# {name}
 
@@ -41,12 +46,17 @@ def generate_claude_md(cfg: Config, project_name: str) -> str:
 
 ---
 
-## Session start — always run these first
+## Session start — agent protocol
 
 ```bash
-spec config --json           # stack, conventions, checks, out_of_bounds
-spec export --active --json  # all active specs + bodies + constitution + git history
-spec next --json             # highest-priority action right now
+spec boot --json             # small startup packet: rules, next action, claimable queue
+spec boot --agent implementer --json
+```
+
+After claiming work, load only the focused task packet:
+
+```bash
+spec context <id> --json
 ```
 
 ---
@@ -61,19 +71,27 @@ spec list --json
 spec list --status <status> --json
 spec list --full --json              # includes bodies
 spec list --assignee "<name>" --json
+spec list --agent implementer --json
 spec list --stale --json
 spec show <id> --json
 spec search "<query>" --json
 spec next --json
+spec boot --json
+spec context <id> --json
+spec gate <id> --json
 spec stats --json
 spec log --last 20 --json
 spec log --spec <id> --json
 
 # Create & lifecycle
 spec new "<title>" --template <feature|bug|adr|api|data-pipeline|experiment> --ai --yes --json
-spec advance <id> --yes --json
-spec advance <id> --note "..." --yes --json
-spec advance <id> --skip-checks --note "reason" --yes --json
+spec approve <id> --yes --json
+spec route <id> implementer --json
+spec claim <id> --as "claude-code" --yes --json
+spec deliver <id> --note "..." --yes --json
+spec pass <id> --note "..." --yes --json        # human only
+spec reject <id> --note "..." --category missed-ac --correction "..." --yes --json
+spec advance <id> --yes --json                   # advanced escape hatch
 spec revert <id> --yes --json
 spec close <id> --reason <descoped|wont-fix|superseded|duplicate> --note "..." --yes --json
 spec assign <id> "<name>" --json
@@ -83,6 +101,8 @@ spec validate <id> --json
 spec run-checks --json
 spec run-checks <id> --json
 spec gate-check <id> --json
+spec correction <id> --category missed-ac --note "..." --json
+spec corrections --suggest --json
 
 # Context & git
 spec config --json
@@ -99,8 +119,10 @@ draft → approved → in-progress → at-gate → implemented
    closed (descoped | wont-fix | superseded | duplicate)
 ```
 
+- Agents use `claim`, `context`, `run-checks`, and `deliver`
+- Humans use `gate`, `pass`, and `reject`
 - `at-gate → implemented` requires explicit human verification — never pass automatically
-- Checks (if configured) block `in-progress → at-gate` automatically
+- Checks (if configured) block `deliver` / `in-progress → at-gate` automatically
 - `.spec/log.md` is an append-only record of all transitions
 
 ---
