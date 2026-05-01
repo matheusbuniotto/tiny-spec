@@ -40,142 +40,72 @@ def generate_claude_md(cfg: Config, project_name: str) -> str:
 
 {conventions}
 
-## Out of bounds — never do this
+## Out of bounds
 
 {out_of_bounds}
 
 ---
 
-## Human setup vs agent work
+## Spec workflow
 
-Humans usually run project setup:
+Specs live in `.spec/`. Every feature, bug fix, or decision gets a spec before implementation.
 
-```bash
-spec init
-spec doctor
-spec setup-checks
+```
+draft → approved → in-progress → at-gate → implemented
 ```
 
-Agents should not run `spec init` unless the human explicitly asks.
+- Humans: `init`, `doctor`, `approve`, `gate`, `pass/reject`
+- Agents: `boot`, `claim`, `context`, `run-checks`, `deliver`
+- `at-gate → implemented` requires explicit human verification — never pass automatically
 
-## Session start — agent protocol
-
-```bash
-spec doctor --json           # readiness: checks, constitution, project context
-spec boot --json             # small startup packet: rules, next action, claimable queue
-spec boot --agent implementer --json
-```
-
-After claiming work, load only the focused task packet:
+### Agent session start
 
 ```bash
-spec context <id> --json
+spec boot --json             # rules, next action, claimable queue
+spec claim <id> --yes --json # claim approved work
+spec context <id> --json     # focused task packet for the claimed spec
 ```
 
----
-
-## Spec-driven workflow
-
-Specs live in `.spec/`. Always check the relevant spec before implementing.
+### Key commands
 
 ```bash
 # Discover
+spec next --json
 spec list --json
 spec list --status <status> --json
-spec list --full --json              # includes bodies
-spec list --assignee "<name>" --json
-spec list --agent implementer --json
-spec list --stale --json
 spec show <id> --json
-spec search "<query>" --json
-spec next --json
-spec boot --json
 spec context <id> --json
-spec gate <id> --json
-spec stats --json
-spec doctor --json
-spec log --last 20 --json
-spec log --spec <id> --json
 
-# Create & lifecycle
-spec new "<title>" --template <feature|bug|adr|api|data-pipeline|experiment> --ai --yes --json
+# Create & advance
+spec new "<title>" --template <feature|bug|adr|api> --ai --yes --json
 spec approve <id> --yes --json
-spec route <id> implementer --json
 spec claim <id> --as "claude-code" --yes --json
 spec deliver <id> --note "AC1: ...; AC2: ...; Checks: ..." --yes --json
 spec pass <id> --note "..." --yes --json        # human only
-spec reject <id> --note "..." --category missed-ac --correction "..." --yes --json
-spec advance <id> --yes --json                   # advanced escape hatch
-spec revert <id> --yes --json
-spec close <id> --reason <descoped|wont-fix|superseded|duplicate> --note "..." --yes --json
-spec assign <id> "<name>" --json
+spec reject <id> --note "..." --category missed-ac --yes --json
 
 # Quality
 spec validate <id> --json
 spec run-checks --json
-spec run-checks <id> --json
 spec gate-check <id> --json
-spec correction <id> --category missed-ac --note "..." --json
-spec corrections --suggest --json
 
-# Context & git
+# Inspect
 spec config --json
-spec export --json
-spec export --active --json
-spec git-context --json
-spec sync --json
+spec log --last 20 --json
+spec stats --json
 ```
-
-### Lifecycle
-```
-draft → approved → in-progress → at-gate → implemented
-  ↘                                               ↗
-   closed (descoped | wont-fix | superseded | duplicate)
-```
-
-- Agents use `claim`, `context`, `run-checks`, and `deliver`
-- Delivery notes must include AC evidence: `AC1 → code/test evidence`, `AC2 → code/test evidence`
-- Humans use `gate`, `pass`, and `reject`
-- `at-gate → implemented` requires explicit human verification — never pass automatically
-- Checks (if configured) block `deliver` / `in-progress → at-gate` automatically
-- `.spec/log.md` is an append-only record of all transitions
 
 ---
 
-## Agent roster
+## Agents
 
-Specialist agents are in `.claude/agents/`. Each has one job.
-
-| Agent | Invoke when |
+| Agent | Role |
 |---|---|
-| `spec-manager` | Creating/triaging specs, pipeline health, lifecycle management |
-| `architect` | Spec is approved and needs a technical plan before coding starts |
-| `implementer` | Implementing an approved spec with a plan.md |
-| `reviewer` | Verifying implemented code against AC before or at gate |
-| `tester` | Writing tests mapped to acceptance criteria |
-| `data-engineer` | Data pipeline or experiment specs, schema changes, DQ gates |
-| `explorer` | Codebase health check, finding debt, mapping unfamiliar areas |
-| `run-reviewer` | After a session — improving agents, CLAUDE.md, constitution |
+| `spec-manager` | Creates/triages specs, runs the full pipeline, manages gate |
+| `architect` | Turns an approved spec into a plan.md before coding starts |
+| `implementer` | Implements the spec, runs checks, delivers to the gate |
 
-### Standard workflow
-```
-spec-manager (creates + approves spec)
-  → architect (writes plan.md)
-    → implementer (writes code + tests)
-      → tester (validates coverage)
-        → reviewer (AC compliance check)
-          → spec-manager (advances to at-gate)
-            → [HUMAN verifies gate checklist]
-              → spec-manager (passes gate)
-```
-
-### Autonomous cycle
-To run the full pipeline without step-by-step prompting:
-```
-"Build <feature> for me and take it to the gate"
-```
-`spec-manager` will: create spec → validate → approve → architect → implement → review → gate.
-It stops at `at-gate` and surfaces the checklist for human sign-off.
+Invoke via `"Build <feature> for me"` → spec-manager orchestrates the full cycle and stops at the human gate.
 
 ---
 
@@ -183,10 +113,9 @@ It stops at `at-gate` and surfaces the checklist for human sign-off.
 
 | File | Purpose |
 |---|---|
-| `.spec/constitution.md` | Governing principles — read before any decision |
+| `.spec/constitution.md` | Project principles — read before any decision |
 | `.spec/config.yaml` | Stack, checks, conventions, out_of_bounds |
 | `.spec/log.md` | Append-only event log |
-| `.spec/git-context.md` | Recent git history for AI context |
-| `.spec/specs/` | Active feature, bug, api, data-pipeline, experiment specs |
-| `.spec/decisions/` | Architecture decision records (ADRs) |
+| `.spec/specs/` | Active specs |
+| `.spec/decisions/` | ADRs |
 """
