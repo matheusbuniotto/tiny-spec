@@ -3,16 +3,18 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.354060'
+gate: ''
 gate_notes: ''
 id: '0004'
 parent: ''
-status: draft
+pr: ''
+status: approved
 tags:
 - claim
 - worktree
 template: feature
 title: 'spec claim --worktree: parallel-agent isolation'
-updated_at: '2026-07-15T11:16:51.354219'
+updated_at: '2026-07-15T20:10:03.591103'
 ---
 
 ## User Story
