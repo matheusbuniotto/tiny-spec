@@ -9,17 +9,25 @@ gate_notes: 'TDD: 13 new tests covering AC1-AC4 (tests/test_agent_output_ergonom
   Manually verified spec next/show/list --json help[], list empty envelope + human
   filter naming, show 9999 not-found help, and export/list --full truncation. SKILL.md
   + skill.md kept in sync. De-duplicated the 10 identical not_found error call sites
-  into ui.not_found() while touching them for help[].'
+  into ui.not_found() while touching them for help[].
+
+
+  ---
+
+  Merged via PR#10, including the code-review fix commit (892f56c) for the AT_GATE
+  help[] bug. Verified locally on main: 55/55 tests pass, no new lint/type issues.
+  Manual usage test re-confirmed post-merge: help[] is a single runnable command at
+  every lifecycle stage.'
 id: '0001'
 parent: ''
 pr: ''
-status: at-gate
+status: implemented
 tags:
 - ergonomics
 - json
 template: feature
 title: 'Agent output ergonomics: help[], counts, truncation'
-updated_at: '2026-07-15T17:22:54.978691'
+updated_at: '2026-07-15T17:35:18.342774'
 ---
 
 ## User Story
