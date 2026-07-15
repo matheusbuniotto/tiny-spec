@@ -335,3 +335,23 @@ exit-code contract test via `CliRunner` (0/1/2 across init/new/show/bad-command)
 Verified manually with literal `echo | spec new ... --json` piping too.
 Files changed: src/spec_cli/commands/new.py, src/spec_cli/commands/lifecycle.py,
 tests/test_json_non_interactive.py (new).
+
+## Session 12: dogfooding — tiny-spec now tracks its own backlog via `.spec/`
+
+Ran `spec init` on the tiny-spec repo itself and converted the remaining local
+`tasks/002`–`008` planning files into real specs (0001–0007) via `spec new`,
+then filled in each body (User Story/Acceptance Criteria/etc.) from the task
+content. `tasks/*.md` deleted — specs are now the source of truth for the
+active backlog; `backlog.md` stays as the deferred-ideas reference. 0007 (CLI
+smoke tests) kept `blocked_by: ["0006"]` (repo CI) — confirmed the dependency
+gate blocks `spec advance` and shows the ⛔ badge on `spec dashboard` for real.
+`spec new`'s own git auto-commit fired on each creation (one commit per spec,
+message `spec(NNNN): create feature — <title>`) — first real validation that
+tiny-spec's git integration works as designed, observed by using the tool
+rather than reading its source. Advanced 0002 (rename kata→checks/verify, no
+blockers) to `approved` via `spec advance` — it's next up per `spec next`.
+Going forward: implement each spec through its own lifecycle (approve → start
+→ gate → pass) instead of ad hoc task files, and let usage friction feed back
+into ergonomics fixes as they're hit.
+Files changed: .spec/ (new — specs 0001-0007, config.yaml, constitution.md,
+git-context.md), tasks/*.md (deleted, was gitignored).
