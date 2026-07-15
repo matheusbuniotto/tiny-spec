@@ -105,13 +105,15 @@ def cmd_list(
             if full and "body" in d:
                 d["body"] = truncate_body(d["body"], s.id)
             spec_dicts.append(d)
-        help_cmd = f"spec show {specs[0].id}" if specs else 'spec new "<title>" --yes --json'
+        help_cmd = f"spec show {specs[0].id} --json" if specs else 'spec new "<title>" --yes --json'
         typer.echo(json.dumps(with_help({"count": len(spec_dicts), "specs": spec_dicts}, help_cmd)))
         return
 
     if not specs:
         filters = _active_filters(status, stale, assignee, claimable, blocked, parent)
-        if filters:
+        if stale and filters == "--stale":
+            console.print("[dim]No stale specs — everything is moving.[/dim]")
+        elif filters:
             console.print(f"[dim]0 specs match {filters}[/dim]")
         else:
             console.print('[dim]No specs found.[/dim] Run [cyan]spec new "My spec"[/cyan]')

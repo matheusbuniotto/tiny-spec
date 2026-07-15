@@ -13,7 +13,7 @@ from rich.rule import Rule
 from ..config import effective_gate, load_config
 from ..models import STATUS_STYLE, TRANSITION_LABELS, TRANSITIONS, SpecStatus
 from ..storage import children_of, find_root, find_spec, list_specs, open_blockers
-from ..ui import console, not_found, plain, with_help
+from ..ui import console, next_command, not_found, with_help
 
 _STAGE_ORDER = list(SpecStatus)
 
@@ -24,15 +24,6 @@ _NEXT_ACTIONS: dict[SpecStatus, str] = {
     SpecStatus.AT_GATE: 'Verify the gate checklist → [cyan]spec gate-check {id}[/cyan] then [cyan]spec advance {id} --note "..."[/cyan]',
     SpecStatus.IMPLEMENTED: "[dim]Done — no further action[/dim]",
 }
-
-
-def _next_action_command(status: SpecStatus, spec_id: str) -> str:
-    """Plain-text command from _NEXT_ACTIONS, for --json help[]."""
-    if status in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED):
-        return "spec next --json"
-    raw = _NEXT_ACTIONS.get(status, "[cyan]spec next[/cyan]")
-    cmd_part = raw.rsplit("→", 1)[-1].strip()
-    return plain(cmd_part).format(id=spec_id)
 
 
 def _progress_bar(status: SpecStatus) -> str:
@@ -76,7 +67,7 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
             out["children"] = [
                 c.to_dict(include_body=False) for c in children_of(spec.id, all_specs)
             ]
-        help_cmd = _next_action_command(spec.status, spec.id)
+        help_cmd = next_command(spec.status, spec.id)
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 

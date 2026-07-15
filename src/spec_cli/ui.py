@@ -9,7 +9,8 @@ import typer
 from rich import box
 from rich.console import Console
 from rich.panel import Panel
-from rich.text import Text
+
+from .models import SpecStatus
 
 console = Console()
 err_console = Console(stderr=True)
@@ -19,6 +20,23 @@ err_console = Console(stderr=True)
 # ponytail: fixed budget well above a normal scaffolded spec body (~2-3k chars);
 # raise if real specs start legitimately exceeding it.
 BODY_TRUNCATE_LIMIT = 8000
+
+# Single concrete --json command to run next, given a spec's current status.
+# One source of truth for next/show/advance/claim's help[] suggestions —
+# each command template is one runnable command, never two joined by "then".
+_NEXT_COMMAND: dict[SpecStatus, str] = {
+    SpecStatus.DRAFT: "spec advance {id} --yes --json",
+    SpecStatus.APPROVED: "spec advance {id} --yes --json",
+    SpecStatus.IN_PROGRESS: 'spec advance {id} --note "<summary>" --yes --json',
+    SpecStatus.AT_GATE: "spec gate-check {id} --json",
+    SpecStatus.IMPLEMENTED: "spec next --json",
+    SpecStatus.CLOSED: "spec next --json",
+}
+
+
+def next_command(status: SpecStatus, spec_id: str) -> str:
+    """The single next command to suggest for a spec in this status."""
+    return _NEXT_COMMAND.get(status, "spec next --json").format(id=spec_id)
 
 
 def success(title: str, body: str, border: str = "bright_green") -> None:
@@ -59,11 +77,6 @@ def json_or(data, render_fn, json_out: bool) -> None:
         typer.echo(json.dumps(data() if callable(data) else data))
     else:
         render_fn()
-
-
-def plain(markup: str) -> str:
-    """Strip rich markup tags, e.g. for reuse in a --json help[] string."""
-    return Text.from_markup(markup).plain
 
 
 def with_help(data: dict, *suggestions: str) -> dict:

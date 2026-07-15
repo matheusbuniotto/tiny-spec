@@ -14,7 +14,7 @@ from ..config import load_config
 from ..models import SpecStatus
 from ..state import transition
 from ..storage import find_root, find_spec, list_specs, open_blockers, save_spec
-from ..ui import console, error, not_found, with_help
+from ..ui import console, error, next_command, not_found, with_help
 
 
 def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Path) -> None:
@@ -30,7 +30,7 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
     # Idempotent re-claim by same agent
     if spec.status == SpecStatus.IN_PROGRESS and spec.assignee == agent_name:
         if json_out:
-            help_cmd = f'spec advance {spec.id} --note "<summary>" --yes --json'
+            help_cmd = next_command(spec.status, spec.id)
             typer.echo(
                 json.dumps(
                     with_help({"claimed": True, "idempotent": True, **spec.to_dict()}, help_cmd)
@@ -100,7 +100,7 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
         out["claimed"] = True
         if git_sha:
             out["git_sha"] = git_sha
-        help_cmd = f'spec advance {spec.id} --note "<summary>" --yes --json'
+        help_cmd = next_command(spec.status, spec.id)
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 

@@ -14,7 +14,7 @@ from rich.rule import Rule
 from ..models import STATUS_STYLE, TRANSITIONS, SpecStatus
 from ..state import transition
 from ..storage import find_root, find_spec, list_specs, open_blockers
-from ..ui import console, err_console, error, not_found, with_help
+from ..ui import console, err_console, error, next_command, not_found, with_help
 from .kata import run_katas_for_spec
 
 # Gate states require notes
@@ -22,14 +22,6 @@ _NOTES_REQUIRED = {SpecStatus.AT_GATE, SpecStatus.IMPLEMENTED}
 _NOTES_PROMPTS = {
     SpecStatus.AT_GATE: "Gate notes (what needs human review?): ",
     SpecStatus.IMPLEMENTED: "Approval notes (what was verified?): ",
-}
-
-_POST_ADVANCE_HELP: dict[SpecStatus, str] = {
-    SpecStatus.APPROVED: "spec advance {id} --yes --json",
-    SpecStatus.IN_PROGRESS: "spec show {id} --json",
-    SpecStatus.AT_GATE: "spec gate-check {id} --json",
-    SpecStatus.IMPLEMENTED: "spec next --json",
-    SpecStatus.DRAFT: "spec show {id} --json",
 }
 
 _GATE_CHECKLIST_RE = re.compile(
@@ -205,7 +197,7 @@ def _do_transition(
         out = spec.to_dict()
         if git_sha:
             out["git_commit"] = git_sha
-        help_cmd = _POST_ADVANCE_HELP.get(spec.status, "spec show {id} --json").format(id=spec.id)
+        help_cmd = next_command(spec.status, spec.id)
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 

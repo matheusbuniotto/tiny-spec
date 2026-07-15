@@ -12,7 +12,7 @@ from rich.panel import Panel
 
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
 from ..storage import find_root, list_specs, open_blockers
-from ..ui import console, with_help
+from ..ui import console, next_command, with_help
 
 _PRIORITY = {
     SpecStatus.AT_GATE: 0,
@@ -69,9 +69,11 @@ def cmd_next(json_out: bool, root: Path) -> None:
         blocker_ids = ", ".join(b.id for b in blockers)
         action = f"Blocked by {blocker_ids} — resolve those first"
         cmd = f"spec show {blockers[0].id}"
+        help_cmd = f"spec show {blockers[0].id} --json"
     else:
         action = _ACTIONS.get(top.status, "Review")
         cmd = _COMMANDS.get(top.status, f"spec show {top.id}").format(id=top.id)
+        help_cmd = next_command(top.status, top.id)
     icon, color = STATUS_STYLE[top.status]
     days = _age_days(top.updated_at)
     age_str = f"{days}d ago" if days > 0 else "today"
@@ -101,7 +103,7 @@ def cmd_next(json_out: bool, root: Path) -> None:
                         "blocked_by": [b.id for b in blockers],
                         "claimable_queue": queue,
                     },
-                    cmd,
+                    help_cmd,
                 )
             )
         )

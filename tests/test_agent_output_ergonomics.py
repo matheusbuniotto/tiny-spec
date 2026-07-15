@@ -38,6 +38,21 @@ def test_show_json_includes_help(tmp_path, monkeypatch):
     assert any("spec" in h for h in out["help"])
 
 
+def test_help_entries_are_single_runnable_commands_at_every_status(tmp_path, monkeypatch):
+    # regression: help[] must never mash two commands together with "then"
+    spec_id = _init_and_new(tmp_path, monkeypatch)
+    runner.invoke(app, ["advance", spec_id, "--yes", "--json"])  # draft -> approved
+    runner.invoke(app, ["advance", spec_id, "--yes", "--json"])  # approved -> in-progress
+    result = runner.invoke(app, ["advance", spec_id, "--note", "ready", "--yes", "--json"])
+    assert json.loads(result.stdout)["status"] == "at-gate"
+
+    for args in (["show", spec_id, "--json"], ["next", "--json"]):
+        out = json.loads(runner.invoke(app, args).stdout)
+        assert len(out["help"]) == 1
+        assert " then " not in out["help"][0]
+        assert out["help"][0].startswith("spec ")
+
+
 def test_list_json_includes_help(tmp_path, monkeypatch):
     _init_and_new(tmp_path, monkeypatch)
     result = runner.invoke(app, ["list", "--json"])
