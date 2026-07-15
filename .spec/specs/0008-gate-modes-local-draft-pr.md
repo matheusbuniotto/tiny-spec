@@ -12,14 +12,14 @@ gate_notes: 'Implemented via TDD: Config.gate (default local, read+write), Spec.
   all covered by tests.'
 id: 0008
 parent: ''
-pr: ''
-status: at-gate
+pr: '7'
+status: implemented
 tags:
 - gate
 - pr-review
 template: feature
 title: 'Gate modes: local, draft, pr'
-updated_at: '2026-07-15T15:10:33.841447'
+updated_at: '2026-07-15T15:17:50.194651'
 ---
 
 ## User Story
