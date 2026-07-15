@@ -10,6 +10,7 @@ from .commands.claim import cmd_claim
 from .commands.close import cmd_close
 from .commands.config_cmd import cmd_config_show
 from .commands.dashboard import cmd_dashboard
+from .commands.doctor import cmd_doctor
 from .commands.edit import cmd_edit
 from .commands.export import cmd_export
 from .commands.gate_check import cmd_gate_check
@@ -282,6 +283,15 @@ def review(
 ) -> None:
     """AI pre-flight review of a spec before approval."""
     cmd_review(spec_id, json_out, root)
+
+
+@app.command(rich_help_panel="Quality")
+def doctor(
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Lint the spec graph: dangling refs, stale claims, circular blocks."""
+    cmd_doctor(json_out, root)
 
 
 @app.command("gate-check", rich_help_panel="Quality")
