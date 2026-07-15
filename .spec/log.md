@@ -22,3 +22,4 @@ Append-only record of spec events.
 - **2026-07-15 15:17 UTC** — ✅ GATE PASSED `0008` **Gate modes: local, draft, pr** — PR #7
 - **2026-07-15 15:18 UTC** — ✅ GATE PASSED `0002` **Rename kata to checks, run-kata to spec verify** — PR #6
 - **2026-07-15 15:19 UTC** — `0010` **spec pr-body: generate Intent/Risk/Evidence from a spec** → `approved`
+- **2026-07-15 15:19 UTC** — `0010` **spec pr-body: generate Intent/Risk/Evidence from a spec** → `in-progress`

@@ -8,13 +8,13 @@ gate_notes: ''
 id: '0010'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - gate
 - pr-review
 template: feature
 title: 'spec pr-body: generate Intent/Risk/Evidence from a spec'
-updated_at: '2026-07-15T15:19:11.754524'
+updated_at: '2026-07-15T15:19:11.910612'
 ---
 
 ## User Story
