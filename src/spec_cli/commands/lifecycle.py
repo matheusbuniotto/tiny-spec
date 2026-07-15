@@ -11,6 +11,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
 
+from ..integrations.git import find_worktree_for_spec
 from ..models import STATUS_STYLE, TRANSITIONS, SpecStatus
 from ..state import transition
 from ..storage import find_root, find_spec, list_specs, open_blockers
@@ -193,10 +194,17 @@ def _do_transition(
     except typer.BadParameter as e:
         error(str(e), json_out, {"error": "invalid_transition", "detail": str(e)})
 
+    worktree_path = (
+        find_worktree_for_spec(root, spec.id) if target == SpecStatus.IMPLEMENTED else None
+    )
+
     if json_out:
         out = spec.to_dict()
         if git_sha:
             out["git_commit"] = git_sha
+        if worktree_path:
+            out["worktree"] = worktree_path
+            out["worktree_remove_hint"] = f"git worktree remove {worktree_path}"
         help_cmd = next_command(spec.status, spec.id)
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
@@ -243,6 +251,11 @@ def _do_transition(
         )
     elif target == SpecStatus.IMPLEMENTED:
         console.print(Rule("[bright_green]Spec implemented[/bright_green]", style="bright_green"))
+        if worktree_path:
+            console.print(
+                f"\n  [yellow]⚠ Worktree still exists:[/yellow] {worktree_path}\n"
+                f"  [dim]Remove it:[/dim] [cyan]git worktree remove {worktree_path}[/cyan]\n"
+            )
 
 
 def cmd_advance(

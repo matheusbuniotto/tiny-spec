@@ -11,6 +11,7 @@ import typer
 from rich import box
 from rich.panel import Panel
 
+from ..integrations.git import find_worktree_for_spec
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
 from ..storage import append_log, find_root, find_spec, save_spec
 from ..ui import console, error, not_found
@@ -79,11 +80,16 @@ def cmd_close(
         except Exception:
             pass
 
+    worktree_path = find_worktree_for_spec(root, spec.id)
+
     if json_out:
         out = spec.to_dict()
         out["close_reason"] = reason
         if git_sha:
             out["git_commit"] = git_sha
+        if worktree_path:
+            out["worktree"] = worktree_path
+            out["worktree_remove_hint"] = f"git worktree remove {worktree_path}"
         typer.echo(json.dumps(out))
         return
 
@@ -101,3 +107,8 @@ def cmd_close(
             border_style="dim",
         )
     )
+    if worktree_path:
+        console.print(
+            f"\n  [yellow]⚠ Worktree still exists:[/yellow] {worktree_path}\n"
+            f"  [dim]Remove it:[/dim] [cyan]git worktree remove {worktree_path}[/cyan]\n"
+        )

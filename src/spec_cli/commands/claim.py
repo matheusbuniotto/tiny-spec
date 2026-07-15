@@ -11,13 +11,35 @@ from rich import box
 from rich.panel import Panel
 
 from ..config import load_config
+from ..integrations.git import git_worktree_add
 from ..models import SpecStatus
 from ..state import transition
-from ..storage import find_root, find_spec, list_specs, open_blockers, save_spec
+from ..storage import find_root, find_spec, list_specs, open_blockers, save_spec, slugify
 from ..ui import console, error, next_command, not_found, with_help
 
 
-def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Path) -> None:
+def _worktree_path(root: Path, spec_id: str) -> Path:
+    return root.resolve().parent / f"{root.resolve().name}-spec-{spec_id}"
+
+
+def _branch_name(spec_id: str, title: str) -> str:
+    return f"spec/{spec_id}-{slugify(title)}"
+
+
+def _claim_worktree(root: Path, spec) -> dict:
+    """Create (or reuse) an isolated worktree for this spec. Returns fields to merge into output."""
+    path = _worktree_path(root, spec.id)
+    branch = _branch_name(spec.id, spec.title)
+    result = git_worktree_add(root, path, branch)
+    out = {"worktree": str(path), "branch": branch}
+    if result["error"]:
+        out["worktree_error"] = result["error"]
+    return out
+
+
+def cmd_claim(
+    spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Path, worktree: bool = False
+) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
@@ -29,18 +51,24 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
 
     # Idempotent re-claim by same agent
     if spec.status == SpecStatus.IN_PROGRESS and spec.assignee == agent_name:
+        wt_fields = _claim_worktree(root, spec) if worktree else {}
         if json_out:
             help_cmd = next_command(spec.status, spec.id)
             typer.echo(
                 json.dumps(
-                    with_help({"claimed": True, "idempotent": True, **spec.to_dict()}, help_cmd)
+                    with_help(
+                        {"claimed": True, "idempotent": True, **spec.to_dict(), **wt_fields},
+                        help_cmd,
+                    )
                 )
             )
         else:
+            wt_line = f"\n[dim]Worktree:[/dim] {wt_fields['worktree']}" if wt_fields else ""
             console.print(
                 Panel(
                     f"[bold]{spec.id}[/bold] — {spec.title}\n"
-                    f"[dim]Already claimed by [cyan]{agent_name}[/cyan] and in progress.[/dim]",
+                    f"[dim]Already claimed by [cyan]{agent_name}[/cyan] and in progress.[/dim]"
+                    f"{wt_line}",
                     title="[bold cyan]Already claimed[/bold cyan]",
                     box=box.ROUNDED,
                     border_style="cyan",
@@ -95,19 +123,24 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
         auto_commit=cfg.git_auto_commit,
     )
 
+    wt_fields = _claim_worktree(root, spec) if worktree else {}
+
     if json_out:
         out = spec.to_dict()
         out["claimed"] = True
         if git_sha:
             out["git_sha"] = git_sha
+        out.update(wt_fields)
         help_cmd = next_command(spec.status, spec.id)
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 
+    wt_line = f"\n[dim]Worktree:[/dim] {wt_fields['worktree']}\n" if wt_fields else ""
     console.print(
         Panel(
             f"[bold]{spec.id}[/bold] — {spec.title}\n"
-            f"[cyan]▶ in-progress[/cyan]  assigned to [cyan]{agent_name}[/cyan]\n\n"
+            f"[cyan]▶ in-progress[/cyan]  assigned to [cyan]{agent_name}[/cyan]\n"
+            f"{wt_line}\n"
             f'[dim]When done:[/dim] [cyan]spec advance {spec.id} --note "<summary>" --yes --json[/cyan]',
             title="[bold cyan]Claimed[/bold cyan]",
             box=box.ROUNDED,

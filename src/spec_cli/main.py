@@ -169,12 +169,15 @@ def close(
 def claim(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
     as_agent: str = typer.Option("", "--as", help="Agent name (default: $SPEC_AGENT or 'agent')"),
+    worktree: bool = typer.Option(
+        False, "--worktree", help="Also create an isolated git worktree for this spec"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Claim an approved spec: assign to self and advance to in-progress atomically."""
-    cmd_claim(spec_id, as_agent, yes, json_out, root)
+    cmd_claim(spec_id, as_agent, yes, json_out, root, worktree)
 
 
 @app.command(rich_help_panel="Lifecycle")

@@ -1,4 +1,5 @@
 """Git integration for tiny-spec — keeps spec lifecycle in sync with git."""
+
 from __future__ import annotations
 
 import subprocess
@@ -42,12 +43,14 @@ def git_recent_commits(root: Path, n: int = 10) -> list[dict]:
     for line in result.stdout.strip().splitlines():
         parts = line.split("\x1f", 3)
         if len(parts) == 4:
-            commits.append({
-                "sha": parts[0][:8],
-                "author": parts[1],
-                "date": parts[2],
-                "subject": parts[3],
-            })
+            commits.append(
+                {
+                    "sha": parts[0][:8],
+                    "author": parts[1],
+                    "date": parts[2],
+                    "subject": parts[3],
+                }
+            )
     return commits
 
 
@@ -142,3 +145,51 @@ def auto_commit_new(root: Path, spec_id: str, title: str, template: str) -> Opti
         return None
     message = f"spec({spec_id}): create {template} — {title}"
     return git_commit_spec(root, message)
+
+
+def _worktree_list(root: Path) -> list[dict]:
+    """Parse `git worktree list --porcelain` into a list of {path, branch} dicts."""
+    result = _run(["git", "worktree", "list", "--porcelain"], cwd=root, check=False)
+    if result.returncode != 0:
+        return []
+    entries: list[dict] = []
+    current: dict = {}
+    for line in result.stdout.splitlines():
+        if line.startswith("worktree "):
+            if current:
+                entries.append(current)
+            current = {"path": line[len("worktree ") :]}
+        elif line.startswith("branch "):
+            current["branch"] = line[len("branch refs/heads/") :]
+    if current:
+        entries.append(current)
+    return entries
+
+
+def git_worktree_add(root: Path, path: Path, branch: str) -> dict:
+    """Idempotently create (or reuse) a worktree at `path` on `branch`.
+
+    Returns {"created": bool, "error": str | None}.
+    """
+    path_str = str(path)
+    if any(e["path"] == path_str for e in _worktree_list(root)):
+        return {"created": False, "error": None}
+
+    args = ["git", "worktree", "add", path_str]
+    if any(e.get("branch") == branch for e in _worktree_list(root)):
+        args.append(branch)
+    else:
+        args += ["-b", branch]
+
+    result = _run(args, cwd=root, check=False)
+    if result.returncode != 0:
+        return {"created": False, "error": result.stderr.strip()}
+    return {"created": True, "error": None}
+
+
+def find_worktree_for_spec(root: Path, spec_id: str) -> Optional[str]:
+    """Return the worktree path for a spec's `spec/<id>-*` branch, if one exists."""
+    for entry in _worktree_list(root):
+        if entry.get("branch", "").startswith(f"spec/{spec_id}-"):
+            return entry["path"]
+    return None
