@@ -3,16 +3,23 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:50.870169'
-gate_notes: ''
+gate: ''
+gate_notes: 'TDD: 13 new tests covering AC1-AC4 (tests/test_agent_output_ergonomics.py).
+  54/54 tests pass, no new mypy/ruff issues (verified pre-existing ones untouched).
+  Manually verified spec next/show/list --json help[], list empty envelope + human
+  filter naming, show 9999 not-found help, and export/list --full truncation. SKILL.md
+  + skill.md kept in sync. De-duplicated the 10 identical not_found error call sites
+  into ui.not_found() while touching them for help[].'
 id: '0001'
 parent: ''
-status: draft
+pr: ''
+status: at-gate
 tags:
 - ergonomics
 - json
 template: feature
 title: 'Agent output ergonomics: help[], counts, truncation'
-updated_at: '2026-07-15T11:16:50.870347'
+updated_at: '2026-07-15T17:22:54.978691'
 ---
 
 ## User Story
@@ -29,10 +36,10 @@ Every `--json` output gains a `"help": [...]` array of concrete next-command tem
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: `spec next --json`, `show`, `list`, `advance`, `claim` all emit a `help` array with at least one concrete command
-- [ ] **AC2**: `spec show 9999 --json` (not found) includes a `help` entry with a recovery command
-- [ ] **AC3**: `spec list --status at-gate --json` on an empty result returns `{"count": 0, "specs": []}` and human output names the filter ("0 specs match --status at-gate")
-- [ ] **AC4**: `spec export --full` / long bodies show `"(truncated, N chars — use spec show <id> --json)"` when truncated
+- [x] **AC1**: `spec next --json`, `show`, `list`, `advance`, `claim` all emit a `help` array with at least one concrete command
+- [x] **AC2**: `spec show 9999 --json` (not found) includes a `help` entry with a recovery command
+- [x] **AC3**: `spec list --status at-gate --json` on an empty result returns `{"count": 0, "specs": []}` and human output names the filter ("0 specs match --status at-gate")
+- [x] **AC4**: `spec export --full` / long bodies show `"(truncated, N chars — use spec show <id> --json)"` when truncated
 
 ## Technical Notes
 
@@ -48,11 +55,11 @@ TOON output format (see backlog.md). Minimal-schema trimming of existing JSON fi
 
 ## Definition of Done
 
-- [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`uv run pytest tests/ -q`)
-- [ ] No regressions in related flows
-- [ ] Code reviewed or self-reviewed against project conventions
-- [ ] SKILL.md / skill.md document `help[]` and the `list` envelope (kept in sync)
+- [x] All acceptance criteria above are met
+- [x] Tests written and passing (`uv run pytest tests/ -q`)
+- [x] No regressions in related flows
+- [x] Code reviewed or self-reviewed against project conventions
+- [x] SKILL.md / skill.md document `help[]` and the `list` envelope (kept in sync)
 
 ## Human Gate Checklist
 

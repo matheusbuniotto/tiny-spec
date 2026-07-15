@@ -13,7 +13,7 @@ from rich.panel import Panel
 
 from ..config import effective_gate, load_config
 from ..storage import find_root, find_spec
-from ..ui import console, error
+from ..ui import console, not_found
 
 _GATE_CHECKLIST_RE = re.compile(
     r"## Human Gate Checklist\s*\n(.*?)(?=\n## |\Z)",
@@ -47,7 +47,7 @@ def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
-        error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
+        not_found(spec_id, json_out)
 
     checklist = _extract_gate_checklist(spec.body)
     gate_mode = effective_gate(spec, load_config(root))

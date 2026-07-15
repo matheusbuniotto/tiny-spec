@@ -11,13 +11,37 @@ from rich.table import Table
 
 from ..models import STATUS_STYLE, SpecStatus
 from ..storage import find_root, list_specs, open_blockers
-from ..ui import console, error
+from ..ui import console, error, truncate_body, with_help
 
 STALE_DAYS = 3
 
 
 def _age_days(dt: datetime) -> int:
     return (datetime.utcnow() - dt).days
+
+
+def _active_filters(
+    status: Optional[str],
+    stale: bool,
+    assignee: Optional[str],
+    claimable: bool,
+    blocked: bool,
+    parent: Optional[str],
+) -> str:
+    parts = []
+    if status:
+        parts.append(f"--status {status}")
+    if stale:
+        parts.append("--stale")
+    if assignee:
+        parts.append(f"--assignee {assignee}")
+    if claimable:
+        parts.append("--claimable")
+    if blocked:
+        parts.append("--blocked")
+    if parent:
+        parts.append(f"--parent {parent}")
+    return " ".join(parts)
 
 
 def cmd_list(
@@ -75,12 +99,22 @@ def cmd_list(
         specs = [s for s in specs if s.parent == parent.zfill(4)]
 
     if json_out:
-        typer.echo(json.dumps([s.to_dict(include_body=full) for s in specs]))
+        spec_dicts = []
+        for s in specs:
+            d = s.to_dict(include_body=full)
+            if full and "body" in d:
+                d["body"] = truncate_body(d["body"], s.id)
+            spec_dicts.append(d)
+        help_cmd = f"spec show {specs[0].id} --json" if specs else 'spec new "<title>" --yes --json'
+        typer.echo(json.dumps(with_help({"count": len(spec_dicts), "specs": spec_dicts}, help_cmd)))
         return
 
     if not specs:
-        if stale:
+        filters = _active_filters(status, stale, assignee, claimable, blocked, parent)
+        if stale and filters == "--stale":
             console.print("[dim]No stale specs — everything is moving.[/dim]")
+        elif filters:
+            console.print(f"[dim]0 specs match {filters}[/dim]")
         else:
             console.print('[dim]No specs found.[/dim] Run [cyan]spec new "My spec"[/cyan]')
         return

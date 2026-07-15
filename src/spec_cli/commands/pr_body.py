@@ -9,7 +9,7 @@ from pathlib import Path
 import typer
 
 from ..storage import find_root, find_spec
-from ..ui import error
+from ..ui import not_found
 
 
 def _section(body: str, heading: str) -> str:
@@ -66,7 +66,7 @@ def cmd_pr_body(spec_id: str, json_out: bool, root: Path) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
-        error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
+        not_found(spec_id, json_out)
 
     intent = _build_intent(spec)
     risk = _build_risk(spec)

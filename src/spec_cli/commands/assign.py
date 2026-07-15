@@ -1,4 +1,5 @@
 """Assign a spec to a person or agent."""
+
 from __future__ import annotations
 
 import json
@@ -7,19 +8,19 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.panel import Panel
 from rich import box
+from rich.panel import Panel
 
 from ..models import STATUS_STYLE
-from ..storage import find_spec, find_root, save_spec, append_log
-from ..ui import console, error
+from ..storage import append_log, find_root, find_spec, save_spec
+from ..ui import console, not_found
 
 
 def cmd_assign(spec_id: str, assignee: str, json_out: bool, root: Path) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
-        error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
+        not_found(spec_id, json_out)
 
     old_assignee = spec.assignee
     spec.assignee = assignee.strip()
@@ -35,12 +36,17 @@ def cmd_assign(spec_id: str, assignee: str, json_out: bool, root: Path) -> None:
 
     icon, color = STATUS_STYLE[spec.status]
     old_str = f"[dim]{old_assignee}[/dim]" if old_assignee else "[dim](unassigned)[/dim]"
-    new_str = f"[bold cyan]{assignee}[/bold cyan]" if assignee.strip() else "[dim](unassigned)[/dim]"
+    new_str = (
+        f"[bold cyan]{assignee}[/bold cyan]" if assignee.strip() else "[dim](unassigned)[/dim]"
+    )
 
-    console.print(Panel(
-        f"[bold]{spec.id}[/bold] — {spec.title}\n"
-        f"[{color}]{icon} {spec.status.value}[/{color}]\n\n"
-        f"  [dim]Assignee:[/dim]  {old_str}  [dim]→[/dim]  {new_str}",
-        title="[bold cyan]👤 Assigned[/bold cyan]",
-        box=box.ROUNDED, border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            f"[bold]{spec.id}[/bold] — {spec.title}\n"
+            f"[{color}]{icon} {spec.status.value}[/{color}]\n\n"
+            f"  [dim]Assignee:[/dim]  {old_str}  [dim]→[/dim]  {new_str}",
+            title="[bold cyan]👤 Assigned[/bold cyan]",
+            box=box.ROUNDED,
+            border_style="cyan",
+        )
+    )

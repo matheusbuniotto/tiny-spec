@@ -14,7 +14,7 @@ from rich.rule import Rule
 from ..models import STATUS_STYLE, TRANSITIONS, SpecStatus
 from ..state import transition
 from ..storage import find_root, find_spec, list_specs, open_blockers
-from ..ui import console, err_console, error
+from ..ui import console, err_console, error, next_command, not_found, with_help
 from .kata import run_katas_for_spec
 
 # Gate states require notes
@@ -43,7 +43,7 @@ def _extract_gate_checklist(body: str) -> str:
 def _resolve(spec_id: str, root: Path, json_out: bool):
     spec = find_spec(root, spec_id)
     if not spec:
-        error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
+        not_found(spec_id, json_out)
     return spec
 
 
@@ -197,7 +197,8 @@ def _do_transition(
         out = spec.to_dict()
         if git_sha:
             out["git_commit"] = git_sha
-        typer.echo(json.dumps(out))
+        help_cmd = next_command(spec.status, spec.id)
+        typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 
     old_icon, old_color = STATUS_STYLE[old_status]

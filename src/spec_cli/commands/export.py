@@ -15,7 +15,7 @@ from rich.table import Table
 from ..config import load_config
 from ..models import STATUS_STYLE, SpecStatus
 from ..storage import find_root, list_specs, spec_dir
-from ..ui import console
+from ..ui import console, truncate_body
 
 
 def _age_str(dt: datetime) -> str:
@@ -44,6 +44,12 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
         lines = log_path.read_text().splitlines()
         log_tail = "\n".join(lines[-20:])
 
+    spec_dicts = []
+    for s in specs:
+        d = s.to_dict(include_body=True)
+        d["body"] = truncate_body(d["body"], s.id)
+        spec_dicts.append(d)
+
     payload = {
         "exported_at": datetime.utcnow().isoformat(),
         "config": {
@@ -61,7 +67,7 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
         "constitution": constitution,
         "git_context": git_context,
         "recent_log": log_tail,
-        "specs": [s.to_dict(include_body=True) for s in specs],
+        "specs": spec_dicts,
         "summary": {
             "total": len(specs),
             "by_status": {s.value: sum(1 for sp in specs if sp.status == s) for s in SpecStatus},

@@ -13,7 +13,7 @@ from rich.rule import Rule
 from ..config import effective_gate, load_config
 from ..models import STATUS_STYLE, TRANSITION_LABELS, TRANSITIONS, SpecStatus
 from ..storage import children_of, find_root, find_spec, list_specs, open_blockers
-from ..ui import console, error
+from ..ui import console, next_command, not_found, with_help
 
 _STAGE_ORDER = list(SpecStatus)
 
@@ -56,7 +56,7 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
-        error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
+        not_found(spec_id, json_out)
 
     all_specs = list_specs(root)
 
@@ -67,7 +67,8 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
             out["children"] = [
                 c.to_dict(include_body=False) for c in children_of(spec.id, all_specs)
             ]
-        typer.echo(json.dumps(out))
+        help_cmd = next_command(spec.status, spec.id)
+        typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 
     icon, color = STATUS_STYLE[spec.status]

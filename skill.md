@@ -25,6 +25,14 @@ Run these three before doing anything else in a new session. They give you full 
 
 ---
 
+## JSON output conventions
+
+- Every `--json` payload — success or error — includes a `"help": [...]` array of concrete next-command strings. Run the first one if you're not sure what to do next.
+- `spec list --json` wraps results in an envelope: `{"count": N, "specs": [...]}` (not a bare array). Empty results still return `{"count": 0, "specs": [], "help": [...]}`.
+- Long spec bodies in multi-spec payloads (`spec list --full --json`, `spec export --json`) get truncated with a trailing `(truncated, N chars — use spec show <id> --json)` marker. Fetch the untruncated body with `spec show <id> --json`.
+
+---
+
 ## Full command reference
 
 ### Lifecycle
@@ -42,7 +50,7 @@ spec new "Title" --blocked-by 0001,0002 --yes --json  # depends on other specs (
 spec new "Title" --parent 0001 --yes --json           # links this spec to a map (informational, non-blocking)
 
 # Read
-spec list --json
+spec list --json                                     # {"count": N, "specs": [...], "help": [...]}
 spec list --status draft --json
 spec list --status in-progress --json
 spec list --status at-gate --json
