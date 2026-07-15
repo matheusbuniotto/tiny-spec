@@ -3,17 +3,19 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T14:59:46.613465'
+gate: ''
 gate_notes: ''
 id: '0011'
 parent: ''
-status: draft
+pr: ''
+status: approved
 tags:
 - templates
 - tdd
 - review
 template: feature
 title: 'Tracer-bullet AC: ordered vertical slices in feature/api templates'
-updated_at: '2026-07-15T14:59:46.613572'
+updated_at: '2026-07-15T16:13:06.838634'
 ---
 
 ## User Story
@@ -30,10 +32,10 @@ Reshape the `feature` and `api` templates' Acceptance Criteria section so AC are
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: `spec new "<title>" --template feature` (no --ai) produces a spec whose AC section template text explicitly instructs "AC1 = thinnest end-to-end slice, AC2+ = one increment each" — visible in the raw scaffolded file.
-- [ ] **AC2**: The same instruction appears in the `api` template; `bug`, `adr`, `data-pipeline`, `experiment` templates are unchanged (verify via diff against their current content).
-- [ ] **AC3**: `spec review <id>` on a feature/api spec whose AC list is an unordered flat bag (e.g. AC1 is unrelated to AC2, or AC1 isn't independently runnable end-to-end) returns a `NEEDS WORK` finding calling out the ordering, not just today's existing checks.
-- [ ] **AC4**: `spec review <id>` on a feature/api spec whose AC is already a proper ordered sequence (e.g. rewrite spec 0002's AC as a positive test case) does not raise this new finding.
+- [x] **AC1**: `spec new "<title>" --template feature` (no --ai) produces a spec whose AC section template text explicitly instructs "AC1 = thinnest end-to-end slice, AC2+ = one increment each" — visible in the raw scaffolded file.
+- [x] **AC2**: The same instruction appears in the `api` template; `bug`, `adr`, `data-pipeline`, `experiment` templates are unchanged (verify via diff against their current content).
+- [x] **AC3**: `spec review <id>` on a feature/api spec whose AC list is an unordered flat bag (e.g. AC1 is unrelated to AC2, or AC1 isn't independently runnable end-to-end) returns a `NEEDS WORK` finding calling out the ordering, not just today's existing checks.
+- [x] **AC4**: `spec review <id>` on a feature/api spec whose AC is already a proper ordered sequence (e.g. rewrite spec 0002's AC as a positive test case) does not raise this new finding.
 
 ## Technical Notes
 
