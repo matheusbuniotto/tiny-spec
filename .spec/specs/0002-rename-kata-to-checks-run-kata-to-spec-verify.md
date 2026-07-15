@@ -3,6 +3,7 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.045572'
+gate: ''
 gate_notes: 'Renamed run-kata to verify (hidden alias kept), katas: to checks: in
   config.yaml (legacy key still read), --skip-kata to --skip-checks (hidden alias
   kept). Swept all user-facing strings/JSON keys (kata_failed->checks_failed error
@@ -14,13 +15,14 @@ gate_notes: 'Renamed run-kata to verify (hidden alias kept), katas: to checks: i
   verified spec verify/run-kata/--help in a scratch project.'
 id: '0002'
 parent: ''
-status: at-gate
+pr: '6'
+status: implemented
 tags:
 - ergonomics
 - naming
 template: feature
 title: Rename kata to checks, run-kata to spec verify
-updated_at: '2026-07-15T11:33:44.336499'
+updated_at: '2026-07-15T15:18:06.226349'
 ---
 
 ## User Story
