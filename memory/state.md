@@ -1,8 +1,19 @@
 # tiny-spec — State File
 
-## Last updated: 2026-07-14 (session 8)
+## Last updated: 2026-07-15 (session 9)
 
 ## Recent changes
+
+### Session 9: `stats`/`dashboard`/`git-context` overlap audit
+
+Fourth (last) bet from the session-8 improvement map: audit these three for redundancy before adding more surface.
+
+**Findings**:
+- `spec git-context` is NOT dead weight — it's the documented "check recent commits" step baked into 4+ scaffolded agent prompts (`architect`, `data-engineer`, `explorer`, etc. in `scaffold/agents.py`) and `scaffold/claude_md.py`. `spec sync` already refreshes `.spec/git-context.md` as a side effect, but the standalone command's own value — viewing recent commits without committing anything — is real and used. Left alone. (Corrects a guess from the original audit note — verify before cutting.)
+- `spec dashboard` and `spec stats` *did* have real overlap: dashboard's "Summary" sidebar panel (a bare bar-chart of per-status counts) was a strictly worse duplicate of what `spec stats`'s "Pipeline" table already shows (same bars, plus percentages, health verdict, and cycle time that dashboard never had). Cut the sidebar from `dashboard.py` — `_summary()` removed, kanban board now takes the full width, replaced with a one-line pointer to `spec stats` for aggregates. Dashboard's own alert banner (at-gate/stale counts) stays — it's a glance-cue tied to the board you're already looking at, not a pure duplicate.
+
+**Files changed (session 9):**
+- `src/spec_cli/commands/dashboard.py` — removed `_summary()`, `_layout()` now full-width kanban + "N specs total — spec stats for health metrics" footer
 
 ### Session 8: Spec dependencies (`blocked_by`) + Maps (`parent`) + Living glossary
 
