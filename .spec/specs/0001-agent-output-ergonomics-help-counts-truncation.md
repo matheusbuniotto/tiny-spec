@@ -8,13 +8,13 @@ gate_notes: ''
 id: '0001'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - ergonomics
 - json
 template: feature
 title: 'Agent output ergonomics: help[], counts, truncation'
-updated_at: '2026-07-15T17:12:45.502158'
+updated_at: '2026-07-15T17:12:49.020557'
 ---
 
 ## User Story
