@@ -15,14 +15,14 @@ gate_notes: 'TDD: 10 new tests covering AC1-AC3 plus the remaining check types f
   on both human and --json output.'
 id: '0003'
 parent: ''
-pr: ''
-status: at-gate
+pr: https://github.com/matheusbuniotto/tiny-spec/pull/11
+status: implemented
 tags:
 - validation
 - ci
 template: feature
 title: 'spec doctor: spec-graph validator'
-updated_at: '2026-07-15T17:47:29.041008'
+updated_at: '2026-07-15T18:16:00.750521'
 ---
 
 ## User Story
