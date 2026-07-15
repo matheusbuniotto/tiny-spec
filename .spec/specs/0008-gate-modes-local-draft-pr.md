@@ -8,13 +8,13 @@ gate_notes: ''
 id: 0008
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - gate
 - pr-review
 template: feature
 title: 'Gate modes: local, draft, pr'
-updated_at: '2026-07-15T15:10:24.651917'
+updated_at: '2026-07-15T15:10:24.799236'
 ---
 
 ## User Story
