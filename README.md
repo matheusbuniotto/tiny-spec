@@ -251,6 +251,16 @@ Project types: `blank`, `python-api`, `typescript-web`, `cli-tool`
 
 `.spec/constitution.md` is a free-form markdown file where you define your project's non-negotiables — principles, standards, and things that are permanently off-limits. Agents read it. So do new engineers.
 
+### Living glossary
+
+The constitution's `## Glossary` section is shared vocabulary, kept current as a side effect of drafting specs rather than a doc nobody revisits:
+
+- `spec new --ai` reads the approved glossary and reuses those terms instead of inventing new names for the same thing.
+- If a draft introduces a genuinely new domain term, the AI proposes it under a `## Glossary — Proposed (review before promoting)` section — never directly into the approved list.
+- You review and move entries from Proposed into `## Glossary` by hand (or reject them by deleting the line). Nothing is auto-promoted.
+
+`spec review` and `spec export` already read the whole constitution file, so glossary terms flow into pre-flight review and cross-session AI context for free.
+
 ---
 
 ## Install

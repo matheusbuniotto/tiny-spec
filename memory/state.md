@@ -4,7 +4,7 @@
 
 ## Recent changes
 
-### Session 8: Spec dependencies (`blocked_by`) + Maps (`parent`)
+### Session 8: Spec dependencies (`blocked_by`) + Maps (`parent`) + Living glossary
 
 **Problem**: tiny-spec calls itself "spec-driven + implementation breakdown" but had no way to express that spec B can't start until spec A is done — specs were an unordered set. This is the highest-leverage gap identified while mapping the tool against Matt Pocock's `wayfinder`/`domain-modeling` skills (github.com/mattpocock/skills): his tooling separates decisions with explicit blocking edges; tiny-spec had none.
 
@@ -24,18 +24,29 @@
 - `spec list --parent <map_id>` — lists a map's children directly.
 - The map spec goes through the same draft→...→implemented lifecycle as everything else; "implemented" for a map means the fog is gone and every child resolved.
 
+**Living glossary** — third bet: `constitution.md` was static, "define your principles" once and never touched again. Domain terms drift between specs because nothing keeps them consistent. Fix mirrors Pocock's `domain-modeling`: update the shared vocabulary as a side effect of the work, not a chore.
+- `constitution.md` (both `init` and `greenfield` templates) now scaffolds a `## Glossary` section.
+- `spec new --ai` reads the approved glossary (`constitution.approved_glossary()` — parses `## Glossary`, stops before any `Proposed` subsection) and passes it into the draft prompt so drafts reuse existing terms instead of renaming things.
+- The AI can append a `<!-- GLOSSARY-PROPOSALS ... -->` sentinel block after the spec body to propose genuinely new shared terms. `ai.extract_glossary_proposals()` strips it from the saved spec body; `constitution.propose_glossary_terms()` appends the terms to a `## Glossary — Proposed (review before promoting)` section, deduped by exact-line match. Nothing is auto-promoted — a human moves lines from Proposed into the real Glossary by hand.
+- `spec new --ai --json` reports `glossary_proposed: [...]` so an agent can tell the human when new terms need review.
+- `spec review` and `spec export` already read the full constitution file, so this needed no changes there — glossary flows through automatically.
+
 **Files changed (session 8):**
 - `src/spec_cli/models.py` — `blocked_by`, `parent` fields, `to_dict`
 - `src/spec_cli/storage.py` — persist/parse both fields, `open_blockers()`, `children_of()` helpers
+- `src/spec_cli/constitution.py` — NEW: `approved_glossary()`, `propose_glossary_terms()`, `read_constitution()`
+- `src/spec_cli/integrations/ai.py` — glossary section in draft prompt, `extract_glossary_proposals()`
+- `src/spec_cli/commands/init.py`, `greenfield.py` — `## Glossary` section in scaffolded constitution.md
 - `src/spec_cli/commands/lifecycle.py` — dependency gate before `in-progress`
 - `src/spec_cli/commands/claim.py` — same gate
 - `src/spec_cli/commands/next_action.py` — skip blocked specs, report `blocked_by`
 - `src/spec_cli/commands/list_cmd.py` — `--blocked`, `--parent` filters; `--claimable` now excludes blocked
+- `src/spec_cli/commands/new.py`, `main.py` — `--blocked-by`, `--parent` options; `map` in `AVAILABLE_TEMPLATES`; glossary read/propose wiring, `glossary_proposed` in output
 - `src/spec_cli/commands/show.py` — "Blocked by" / "Part of map" lines, live child roster for maps
 - `src/spec_cli/commands/dashboard.py` — ⛔ badge
-- `src/spec_cli/commands/new.py`, `main.py` — `--blocked-by`, `--parent` options; `map` in `AVAILABLE_TEMPLATES`
 - `src/spec_cli/templates/map.md` — NEW
 - `tests/test_storage.py` — NEW: `open_blockers()`, `children_of()` unit tests
+- `tests/test_glossary.py` — NEW: `extract_glossary_proposals()`, `approved_glossary()`, `propose_glossary_terms()`, end-to-end `cmd_new` glossary proposal test
 - `README.md`, `skill.md`, `src/spec_cli/SKILL.md` — documented
 
 ### Session 7: SKILL.md + Agent Overhaul

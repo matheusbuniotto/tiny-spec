@@ -7,8 +7,8 @@ from pathlib import Path
 import typer
 import yaml
 
-from ..integrations.git import is_git_repo, git_init, git_context_markdown
-from ..ui import console, success, error
+from ..integrations.git import git_context_markdown, git_init, is_git_repo
+from ..ui import console, error, success
 
 
 def cmd_init(root: Path, author: str, yes: bool, json_out: bool) -> None:
@@ -23,6 +23,7 @@ def cmd_init(root: Path, author: str, yes: bool, json_out: bool) -> None:
     if not git_was_repo:
         if not json_out and not yes:
             import questionary
+
             style = questionary.Style([("question", "bold cyan"), ("answer", "bold white")])
             do_init = questionary.confirm(
                 "Not a git repository. Run git init?", default=True, style=style
@@ -85,7 +86,11 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
     (sd / "constitution.md").write_text(
         "# Project Constitution\n\n"
         "> Define your project's governing principles here.\n\n"
-        "## Principles\n\n- \n\n## Standards\n\n- \n\n## Out of Bounds\n\n- \n"
+        "## Principles\n\n- \n\n## Standards\n\n- \n\n## Out of Bounds\n\n- \n\n"
+        "## Glossary\n\n"
+        "> Shared vocabulary for this project. `spec new --ai` reads this so drafts use "
+        'consistent terms, and proposes new ones it encounters under "Glossary — Proposed" '
+        "below for you to review and promote here.\n\n- \n"
     )
 
     # Write git context if the repo has commits
@@ -98,21 +103,29 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
         )
 
     if json_out:
-        typer.echo(json.dumps({
-            "initialized": True,
-            "path": str(sd),
-            "author": resolved_author,
-            "git_initialized": git_initialized,
-            "git_context": bool(git_context),
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "initialized": True,
+                    "path": str(sd),
+                    "author": resolved_author,
+                    "git_initialized": git_initialized,
+                    "git_context": bool(git_context),
+                }
+            )
+        )
     else:
         git_line = ""
         if git_initialized:
             git_line = "\n  [dim]Git:[/dim]  [green]git init[/green] [dim]done[/dim]"
         elif git_was_repo and git_context:
             git_line = "\n  [dim]Git:[/dim]  [green]context captured[/green] [dim]→ .spec/git-context.md[/dim]"
-        success("tiny-spec", (
-            f"[bright_green]Initialized[/bright_green] [dim]{sd}[/dim]{git_line}\n\n"
-            f"  [dim]Edit[/dim] [cyan].spec/config.yaml[/cyan] [dim]to set project context[/dim]\n"
-            f"  [dim]Run [/dim] [cyan]spec new \"My first spec\"[/cyan] [dim]to create a spec[/dim]"
-        ), border="bright_blue")
+        success(
+            "tiny-spec",
+            (
+                f"[bright_green]Initialized[/bright_green] [dim]{sd}[/dim]{git_line}\n\n"
+                f"  [dim]Edit[/dim] [cyan].spec/config.yaml[/cyan] [dim]to set project context[/dim]\n"
+                f'  [dim]Run [/dim] [cyan]spec new "My first spec"[/cyan] [dim]to create a spec[/dim]'
+            ),
+            border="bright_blue",
+        )

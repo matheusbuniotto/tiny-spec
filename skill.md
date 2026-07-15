@@ -138,11 +138,13 @@ draft → approved → in-progress → at-gate → implemented
 
 ```bash
 spec config --json                                          # 1. get context
-spec new "<title>" --template feature --ai --yes --json    # 2. AI draft
+spec new "<title>" --template feature --ai --yes --json    # 2. AI draft (reuses glossary terms, proposes new ones)
 spec show <id> --json                                       # 3. read it back
 spec review <id> --json                                     # 4. pre-flight check
 # if verdict is APPROVE or NEEDS WORK with minor issues, show user and ask
 spec advance <id> --yes --json                             # 5. draft → approved (after user OK)
+# check the JSON's "glossary_proposed" — if non-empty, tell the user new terms
+# were proposed in .spec/constitution.md under "Glossary — Proposed" for review
 ```
 
 ## Workflow: "this idea is too big/foggy to spec directly"

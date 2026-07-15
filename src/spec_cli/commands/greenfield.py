@@ -10,11 +10,11 @@ import yaml
 from rich.tree import Tree
 
 from ..config import Config, save_config
-from ..integrations.git import git_init, git_commit_spec
+from ..integrations.git import git_commit_spec, git_init
 from ..scaffold.agents import AGENTS
 from ..scaffold.claude_md import generate_claude_md
 from ..scaffold.project_types import scaffold_project
-from ..ui import console, success, error
+from ..ui import console, error, success
 
 PROJECT_TYPES = ["blank", "python-api", "typescript-web", "cli-tool"]
 
@@ -30,7 +30,11 @@ def cmd_greenfield(
     root = Path(folder).resolve()
 
     if root.exists() and any(root.iterdir()):
-        error("Folder already exists and is not empty.", json_out, {"error": "folder_not_empty", "path": str(root)})
+        error(
+            "Folder already exists and is not empty.",
+            json_out,
+            {"error": "folder_not_empty", "path": str(root)},
+        )
 
     root.mkdir(parents=True, exist_ok=True)
 
@@ -48,35 +52,49 @@ def cmd_greenfield(
 
     if not yes and not json_out:
         import questionary
-        style = questionary.Style([
-            ("question", "bold cyan"), ("answer", "bold white"),
-            ("pointer", "bold yellow"), ("selected", "bold green"),
-        ])
-        project_name = questionary.text("Project name:", default=folder, style=style).ask() or folder
+
+        style = questionary.Style(
+            [
+                ("question", "bold cyan"),
+                ("answer", "bold white"),
+                ("pointer", "bold yellow"),
+                ("selected", "bold green"),
+            ]
+        )
+        project_name = (
+            questionary.text("Project name:", default=folder, style=style).ask() or folder
+        )
         description = questionary.text("Short description:", style=style).ask() or ""
         if not resolved_author:
             resolved_author = questionary.text("Author:", style=style).ask() or ""
 
         if project_type == "blank":
-            project_type = questionary.select(
-                "Project type:",
-                choices=PROJECT_TYPES,
-                default="blank",
-                style=style,
-            ).ask() or "blank"
+            project_type = (
+                questionary.select(
+                    "Project type:",
+                    choices=PROJECT_TYPES,
+                    default="blank",
+                    style=style,
+                ).ask()
+                or "blank"
+            )
 
-        stack_raw = questionary.text(
-            "Languages (comma-separated, e.g. python, typescript):",
-            style=style,
-        ).ask() or ""
+        stack_raw = (
+            questionary.text(
+                "Languages (comma-separated, e.g. python, typescript):",
+                style=style,
+            ).ask()
+            or ""
+        )
         languages = [s.strip() for s in stack_raw.split(",") if s.strip()]
 
         fw_raw = questionary.text("Frameworks (e.g. fastapi, react):", style=style).ask() or ""
         frameworks = [s.strip() for s in fw_raw.split(",") if s.strip()]
 
-        testing = questionary.text(
-            "Testing approach (e.g. pytest, >80% coverage):", style=style
-        ).ask() or ""
+        testing = (
+            questionary.text("Testing approach (e.g. pytest, >80% coverage):", style=style).ask()
+            or ""
+        )
 
     # Build config
     cfg = Config(
@@ -100,7 +118,13 @@ def cmd_greenfield(
 
     # 2. Initialize .spec/
     _init_spec(root, resolved_author, cfg)
-    created += [".spec/config.yaml", ".spec/constitution.md", ".spec/specs/", ".spec/decisions/", ".spec/log.md"]
+    created += [
+        ".spec/config.yaml",
+        ".spec/constitution.md",
+        ".spec/specs/",
+        ".spec/decisions/",
+        ".spec/log.md",
+    ]
 
     # Write placeholder git context (no commits yet in a fresh repo)
     git_context_path = root / ".spec" / "git-context.md"
@@ -136,12 +160,16 @@ def cmd_greenfield(
             created.extend(scaffolded)
 
     if json_out:
-        typer.echo(json.dumps({
-            "created": str(root),
-            "project_type": project_type,
-            "spec_only": spec_only,
-            "files": created,
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "created": str(root),
+                    "project_type": project_type,
+                    "spec_only": spec_only,
+                    "files": created,
+                }
+            )
+        )
         return
 
     # Rich output
@@ -153,9 +181,11 @@ def cmd_greenfield(
         body += f"  Type   : [cyan]{project_type}[/cyan]\n"
         body += f"  Agents : [cyan]{len(AGENTS)}[/cyan] in .claude/agents/\n"
     body += f"  Specs  : [cyan].spec/[/cyan]\n\n"
-    body += ("  [dim]Next:[/dim] edit [cyan].spec/config.yaml[/cyan] then [cyan]spec new \"...\"[/cyan]"
-             if spec_only else
-             "  [dim]Next:[/dim] edit [cyan].spec/config.yaml[/cyan] and [cyan]CLAUDE.md[/cyan]")
+    body += (
+        '  [dim]Next:[/dim] edit [cyan].spec/config.yaml[/cyan] then [cyan]spec new "..."[/cyan]'
+        if spec_only
+        else "  [dim]Next:[/dim] edit [cyan].spec/config.yaml[/cyan] and [cyan]CLAUDE.md[/cyan]"
+    )
 
     success("tiny-spec greenfield", body, border="bright_blue")
     console.print(tree)
@@ -215,7 +245,11 @@ out_of_bounds: {_yaml_list(cfg.out_of_bounds)}
     (sd / "constitution.md").write_text(
         f"# {cfg.project_name or 'Project'} Constitution\n\n"
         "> Define your project's governing principles here.\n\n"
-        "## Principles\n\n- \n\n## Standards\n\n- \n\n## Out of Bounds\n\n- \n"
+        "## Principles\n\n- \n\n## Standards\n\n- \n\n## Out of Bounds\n\n- \n\n"
+        "## Glossary\n\n"
+        "> Shared vocabulary for this project. `spec new --ai` reads this so drafts use "
+        'consistent terms, and proposes new ones it encounters under "Glossary — Proposed" '
+        "below for you to review and promote here.\n\n- \n"
     )
 
 

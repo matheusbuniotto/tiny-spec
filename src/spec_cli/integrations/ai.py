@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
 DRAFT_PROMPT = """\
 You are a senior software architect writing a production-quality spec for: "{title}"
 
-{context_section}Use this template structure exactly — preserve all section headings:
+{context_section}{glossary_section}Use this template structure exactly — preserve all section headings:
 {template_body}
 
 ## Filling instructions
@@ -55,20 +56,49 @@ This section is what the human uses to decide pass/fail. It must be specific to 
 - Every item must be completable in under 5 minutes.
 - If the test command is unknown, write a reasonable default and append `# VERIFY`.
 
-Return only the markdown content — no preamble, no explanation, no code fences wrapping the entire output.\
+**Glossary — shared vocabulary:**
+- Reuse the project's existing terms below exactly as defined. Don't invent a new name for something already named.
+- If this spec introduces a genuinely new domain term that other specs will need to reuse (not a one-off implementation detail), propose it by appending — after the spec body, nothing else after it — a block exactly like:
+  <!-- GLOSSARY-PROPOSALS
+  - **Term**: one-line definition
+  -->
+- Omit that block entirely if there's nothing worth proposing. Most specs won't need it.
+
+Return only the markdown content (plus the optional glossary block at the very end) — no preamble, no explanation, no code fences wrapping the entire output.\
 """
 
 
-def _build_prompt(title: str, template: str, context: str) -> str:
+def _build_prompt(title: str, template: str, context: str, glossary: str = "") -> str:
     tpl_dir = Path(__file__).parent.parent / "templates"
     tpl_path = tpl_dir / f"{template}.md"
     template_body = tpl_path.read_text() if tpl_path.exists() else "## Overview\n\n## Details\n"
     context_section = f"Project context:\n{context}\n\n" if context.strip() else ""
+    glossary_section = (
+        f"Existing glossary (reuse these terms):\n{glossary}\n\n" if glossary.strip() else ""
+    )
     return DRAFT_PROMPT.format(
         title=title,
         template_body=template_body.replace("{", "{{").replace("}", "}}"),
         context_section=context_section.replace("{", "{{").replace("}", "}}"),
+        glossary_section=glossary_section.replace("{", "{{").replace("}", "}}"),
     )
+
+
+_GLOSSARY_BLOCK_RE = re.compile(r"<!--\s*GLOSSARY-PROPOSALS\s*(.*?)-->", re.DOTALL)
+
+
+def extract_glossary_proposals(body: str) -> tuple[str, list[str]]:
+    """Strip a trailing GLOSSARY-PROPOSALS comment block from AI-drafted body. Returns (clean_body, terms)."""
+    m = _GLOSSARY_BLOCK_RE.search(body)
+    if not m:
+        return body, []
+    terms = [
+        line.strip().lstrip("- ").strip()
+        for line in m.group(1).splitlines()
+        if line.strip().startswith("-")
+    ]
+    clean_body = (body[: m.start()] + body[m.end() :]).rstrip() + "\n"
+    return clean_body, [t for t in terms if t]
 
 
 def _via_claude_code(prompt: str) -> str:
@@ -86,6 +116,7 @@ def _via_claude_code(prompt: str) -> str:
 
 def _via_anthropic(prompt: str, model: str) -> str:
     import anthropic
+
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError("ANTHROPIC_API_KEY is not set.")
@@ -100,6 +131,7 @@ def _via_anthropic(prompt: str, model: str) -> str:
 
 def _via_openai(prompt: str, model: str, base_url: str) -> str:
     import openai
+
     api_key = os.environ.get("OPENAI_API_KEY", "sk-placeholder")
     client = openai.OpenAI(api_key=api_key, base_url=base_url or None)
     resp = client.chat.completions.create(
@@ -110,15 +142,24 @@ def _via_openai(prompt: str, model: str, base_url: str) -> str:
     return resp.choices[0].message.content
 
 
-def draft_spec_content(title: str, template: str, context: str = "", provider: str = "claude-code", model: str = "", base_url: str = "") -> str:
+def draft_spec_content(
+    title: str,
+    template: str,
+    context: str = "",
+    provider: str = "claude-code",
+    model: str = "",
+    base_url: str = "",
+    glossary: str = "",
+) -> str:
     """
     Draft spec content via the configured AI provider.
 
     provider: "claude-code" | "anthropic" | "openai"
     model: provider-specific model name (optional, uses sensible defaults)
     base_url: for openai provider — allows Ollama, Groq, etc.
+    glossary: existing approved glossary terms (from constitution.md) to keep terminology consistent
     """
-    prompt = _build_prompt(title, template, context)
+    prompt = _build_prompt(title, template, context, glossary)
 
     if provider == "claude-code":
         try:
