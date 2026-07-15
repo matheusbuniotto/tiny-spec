@@ -6,21 +6,21 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from rich import box
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
-from rich.markdown import Markdown
-from rich import box
 
-from ..models import SpecStatus, STATUS_STYLE, TRANSITIONS
+from ..models import STATUS_STYLE, TRANSITIONS, SpecStatus
 from ..state import transition
-from ..storage import find_spec, find_root
+from ..storage import find_root, find_spec, list_specs, open_blockers
 from ..ui import console, err_console, error
 from .kata import run_katas_for_spec
 
 # Gate states require notes
 _NOTES_REQUIRED = {SpecStatus.AT_GATE, SpecStatus.IMPLEMENTED}
 _NOTES_PROMPTS = {
-    SpecStatus.AT_GATE:     "Gate notes (what needs human review?): ",
+    SpecStatus.AT_GATE: "Gate notes (what needs human review?): ",
     SpecStatus.IMPLEMENTED: "Approval notes (what was verified?): ",
 }
 
@@ -55,9 +55,11 @@ def _get_notes(target: SpecStatus, note: Optional[str], yes: bool, json_out: boo
     if yes:
         error(
             f"Notes required to advance to [magenta]{target.value}[/magenta]. Use [cyan]--note[/cyan]",
-            json_out, {"error": "notes_required", "advancing_to": target.value},
+            json_out,
+            {"error": "notes_required", "advancing_to": target.value},
         )
     import questionary
+
     style = questionary.Style([("question", "bold cyan"), ("answer", "bold white")])
     notes = questionary.text(_NOTES_PROMPTS[target], style=style).ask() or ""
     if not notes.strip():
@@ -73,16 +75,24 @@ def _check_drift(spec, root: Path) -> bool:
     if not p.exists():
         return False
     from datetime import datetime, timezone
+
     file_mtime = datetime.utcfromtimestamp(p.stat().st_mtime)
     delta = (file_mtime - spec.updated_at).total_seconds()
     return delta > 5
 
 
 def _do_transition(
-    spec_id: str, target: SpecStatus, note: Optional[str], yes: bool,
-    json_out: bool, root: Path, skip_kata: bool = False, skip_kata_reason: str = "",
+    spec_id: str,
+    target: SpecStatus,
+    note: Optional[str],
+    yes: bool,
+    json_out: bool,
+    root: Path,
+    skip_kata: bool = False,
+    skip_kata_reason: str = "",
 ) -> None:
     from ..config import load_config
+
     root = find_root(root)
     spec = _resolve(spec_id, root, json_out)
     old_status = spec.status
@@ -90,19 +100,40 @@ def _do_transition(
 
     if old_status in (SpecStatus.IN_PROGRESS, SpecStatus.APPROVED) and _check_drift(spec, root):
         if not json_out:
-            console.print(Panel(
-                "[yellow]⚠ Spec file was modified since last transition.[/yellow]\n"
-                "[dim]The spec may have drifted from what was approved. "
-                "Consider reviewing changes before advancing.[/dim]",
-                box=box.ROUNDED, border_style="yellow",
-            ))
+            console.print(
+                Panel(
+                    "[yellow]⚠ Spec file was modified since last transition.[/yellow]\n"
+                    "[dim]The spec may have drifted from what was approved. "
+                    "Consider reviewing changes before advancing.[/dim]",
+                    box=box.ROUNDED,
+                    border_style="yellow",
+                )
+            )
+
+    # Dependency gate — can't start work while a blocker is still open
+    if target == SpecStatus.IN_PROGRESS:
+        blockers = open_blockers(spec, list_specs(root))
+        if blockers:
+            ids = ", ".join(b.id for b in blockers)
+            error(
+                f"Spec {spec.id} is blocked by {ids} — not implemented/closed yet",
+                json_out,
+                {
+                    "error": "blocked",
+                    "id": spec.id,
+                    "blocked_by": [b.id for b in blockers],
+                    "hint": "Finish or close the blocking specs first, or edit blocked_by if this is stale.",
+                },
+            )
 
     # Kata gate enforcement — runs before entering at-gate
     if target == SpecStatus.AT_GATE:
         cfg = load_config(root)
         if cfg.katas and not skip_kata:
             if not json_out:
-                console.print(f"[dim]Running {len(cfg.katas)} kata{'s' if len(cfg.katas) != 1 else ''} before gate...[/dim]\n")
+                console.print(
+                    f"[dim]Running {len(cfg.katas)} kata{'s' if len(cfg.katas) != 1 else ''} before gate...[/dim]\n"
+                )
             results, all_passed = run_katas_for_spec(root, spec_id)
             if not all_passed:
                 failed = [r["name"] for r in results if not r["passed"]]
@@ -110,16 +141,23 @@ def _do_transition(
                     error(
                         f"Kata failures block gate: {', '.join(failed)}",
                         json_out,
-                        {"error": "kata_failed", "failed": failed, "results": results,
-                         "hint": "Run spec run-kata to see details, or use --skip-kata --note 'reason' to override"},
+                        {
+                            "error": "kata_failed",
+                            "failed": failed,
+                            "results": results,
+                            "hint": "Run spec run-kata to see details, or use --skip-kata --note 'reason' to override",
+                        },
                     )
                 console.print()
                 from .kata import _render_results
+
                 _render_results(results, spec_id, root)
                 raise typer.Exit(1)
             if not json_out and results:
                 passed_count = sum(1 for r in results if r["passed"])
-                console.print(f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} katas passed[/dim]\n")
+                console.print(
+                    f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} katas passed[/dim]\n"
+                )
         elif skip_kata and cfg.katas:
             if not json_out:
                 reason_str = f" — {skip_kata_reason}" if skip_kata_reason else ""
@@ -141,41 +179,55 @@ def _do_transition(
     old_icon, old_color = STATUS_STYLE[old_status]
     new_icon, new_color = STATUS_STYLE[spec.status]
     git_line = f"\n  [dim]Git:[/dim] [green]{git_sha}[/green]" if git_sha else ""
-    console.print(Panel(
-        f"[bold]{spec.id}[/bold] — {spec.title}\n\n"
-        f"  [{old_color}]{old_icon} {old_status.value}[/{old_color}]"
-        f"  [dim]→[/dim]  "
-        f"[{new_color}]{new_icon} {spec.status.value}[/{new_color}]"
-        f"{git_line}",
-        title="[bold bright_green]Transition complete[/bold bright_green]",
-        box=box.ROUNDED, border_style="bright_green",
-    ))
+    console.print(
+        Panel(
+            f"[bold]{spec.id}[/bold] — {spec.title}\n\n"
+            f"  [{old_color}]{old_icon} {old_status.value}[/{old_color}]"
+            f"  [dim]→[/dim]  "
+            f"[{new_color}]{new_icon} {spec.status.value}[/{new_color}]"
+            f"{git_line}",
+            title="[bold bright_green]Transition complete[/bold bright_green]",
+            box=box.ROUNDED,
+            border_style="bright_green",
+        )
+    )
     if target == SpecStatus.AT_GATE:
         checklist = _extract_gate_checklist(spec.body)
         if checklist:
-            console.print(Panel(
-                Markdown(f"**Before you pass this gate, verify each item:**\n\n{checklist}"),
-                title="[bold magenta]⏸ Human Gate Checklist[/bold magenta]",
-                box=box.ROUNDED, border_style="magenta",
-            ))
+            console.print(
+                Panel(
+                    Markdown(f"**Before you pass this gate, verify each item:**\n\n{checklist}"),
+                    title="[bold magenta]⏸ Human Gate Checklist[/bold magenta]",
+                    box=box.ROUNDED,
+                    border_style="magenta",
+                )
+            )
         else:
-            console.print(Panel(
-                "[magenta]⏸ Waiting for human review.[/magenta]\n"
-                "[yellow]⚠ No Human Gate Checklist found in this spec. "
-                "Consider adding one for clear verification steps.[/yellow]",
-                box=box.ROUNDED, border_style="magenta",
-            ))
+            console.print(
+                Panel(
+                    "[magenta]⏸ Waiting for human review.[/magenta]\n"
+                    "[yellow]⚠ No Human Gate Checklist found in this spec. "
+                    "Consider adding one for clear verification steps.[/yellow]",
+                    box=box.ROUNDED,
+                    border_style="magenta",
+                )
+            )
         console.print(
             f"\n  [dim]Once verified, run[/dim] [cyan]spec advance {spec_id} "
-            f"--note \"<what you verified>\"[/cyan]\n"
+            f'--note "<what you verified>"[/cyan]\n'
         )
     elif target == SpecStatus.IMPLEMENTED:
         console.print(Rule("[bright_green]Spec implemented[/bright_green]", style="bright_green"))
 
 
 def cmd_advance(
-    spec_id: str, note: Optional[str], yes: bool, json_out: bool, root: Path,
-    skip_kata: bool = False, skip_kata_reason: str = "",
+    spec_id: str,
+    note: Optional[str],
+    yes: bool,
+    json_out: bool,
+    root: Path,
+    skip_kata: bool = False,
+    skip_kata_reason: str = "",
 ) -> None:
     root = find_root(root)
     spec = _resolve(spec_id, root, json_out)
@@ -183,7 +235,8 @@ def cmd_advance(
     if not next_states:
         error(
             "Already at terminal state — nothing to advance.",
-            json_out, {"error": "terminal_state", "status": spec.status.value},
+            json_out,
+            {"error": "terminal_state", "status": spec.status.value},
         )
     _do_transition(spec_id, next_states[0], note, yes, json_out, root, skip_kata, skip_kata_reason)
 

@@ -77,6 +77,8 @@ def save_spec(spec: Spec, root: Path) -> Path:
         "assignee": spec.assignee,
         "gate_notes": spec.gate_notes,
         "tags": spec.tags,
+        "blocked_by": spec.blocked_by,
+        "parent": spec.parent,
         "template": spec.template,
     }
     post = frontmatter.Post(spec.body, **meta)
@@ -102,8 +104,9 @@ def load_spec(path: Path) -> Spec:
         if isinstance(data.get(field), str):
             data[field] = datetime.fromisoformat(data[field])
 
-    if isinstance(data.get("tags"), str):
-        data["tags"] = [t.strip() for t in data["tags"].split(",") if t.strip()]
+    for field in ("tags", "blocked_by"):
+        if isinstance(data.get(field), str):
+            data[field] = [t.strip() for t in data[field].split(",") if t.strip()]
 
     return Spec(**data)
 
@@ -146,7 +149,23 @@ def find_spec(root: Path, id_or_prefix: str) -> Optional[Spec]:
     return None
 
 
+def open_blockers(spec: Spec, all_specs: list[Spec]) -> list[Spec]:
+    """Specs listed in blocked_by that aren't implemented or closed yet."""
+    by_id = {s.id: s for s in all_specs}
+    return [
+        by_id[b]
+        for b in spec.blocked_by
+        if b in by_id and by_id[b].status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
+    ]
+
+
+def children_of(spec_id: str, all_specs: list[Spec]) -> list[Spec]:
+    """Specs whose parent points at spec_id."""
+    return [s for s in all_specs if s.parent == spec_id]
+
+
 # ── Event log ────────────────────────────────────────────────────────────────
+
 
 def append_log(root: Path, entry: str) -> None:
     """Append a timestamped entry to .spec/log.md."""

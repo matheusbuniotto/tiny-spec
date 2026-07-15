@@ -1,4 +1,5 @@
 """Atomically claim an approved spec: assign to self and start work."""
+
 from __future__ import annotations
 
 import json
@@ -6,13 +7,13 @@ import os
 from pathlib import Path
 
 import typer
-from rich.panel import Panel
 from rich import box
+from rich.panel import Panel
 
-from ..models import SpecStatus
-from ..storage import find_spec, find_root, save_spec
-from ..state import transition
 from ..config import load_config
+from ..models import SpecStatus
+from ..state import transition
+from ..storage import find_root, find_spec, list_specs, open_blockers, save_spec
 from ..ui import console, error
 
 
@@ -31,12 +32,15 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
         if json_out:
             typer.echo(json.dumps({"claimed": True, "idempotent": True, **spec.to_dict()}))
         else:
-            console.print(Panel(
-                f"[bold]{spec.id}[/bold] — {spec.title}\n"
-                f"[dim]Already claimed by [cyan]{agent_name}[/cyan] and in progress.[/dim]",
-                title="[bold cyan]Already claimed[/bold cyan]",
-                box=box.ROUNDED, border_style="cyan",
-            ))
+            console.print(
+                Panel(
+                    f"[bold]{spec.id}[/bold] — {spec.title}\n"
+                    f"[dim]Already claimed by [cyan]{agent_name}[/cyan] and in progress.[/dim]",
+                    title="[bold cyan]Already claimed[/bold cyan]",
+                    box=box.ROUNDED,
+                    border_style="cyan",
+                )
+            )
         return
 
     # Claimed by someone else
@@ -60,12 +64,28 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
             },
         )
 
+    blockers = open_blockers(spec, list_specs(root))
+    if blockers:
+        ids = ", ".join(b.id for b in blockers)
+        error(
+            f"Spec {spec.id} is blocked by {ids} — not implemented/closed yet",
+            json_out,
+            {
+                "error": "blocked",
+                "id": spec.id,
+                "blocked_by": [b.id for b in blockers],
+                "hint": "Finish or close the blocking specs first, or edit blocked_by if this is stale.",
+            },
+        )
+
     # Assign before transition so assignee is persisted in the commit
     spec.assignee = agent_name
 
     cfg = load_config(root)
     spec, git_sha = transition(
-        spec, SpecStatus.IN_PROGRESS, root,
+        spec,
+        SpecStatus.IN_PROGRESS,
+        root,
         notes=f"Claimed by {agent_name}",
         auto_commit=cfg.git_auto_commit,
     )
@@ -78,10 +98,13 @@ def cmd_claim(spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Pa
         typer.echo(json.dumps(out))
         return
 
-    console.print(Panel(
-        f"[bold]{spec.id}[/bold] — {spec.title}\n"
-        f"[cyan]▶ in-progress[/cyan]  assigned to [cyan]{agent_name}[/cyan]\n\n"
-        f"[dim]When done:[/dim] [cyan]spec advance {spec.id} --note \"<summary>\" --yes --json[/cyan]",
-        title="[bold cyan]Claimed[/bold cyan]",
-        box=box.ROUNDED, border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            f"[bold]{spec.id}[/bold] — {spec.title}\n"
+            f"[cyan]▶ in-progress[/cyan]  assigned to [cyan]{agent_name}[/cyan]\n\n"
+            f'[dim]When done:[/dim] [cyan]spec advance {spec.id} --note "<summary>" --yes --json[/cyan]',
+            title="[bold cyan]Claimed[/bold cyan]",
+            box=box.ROUNDED,
+            border_style="cyan",
+        )
+    )

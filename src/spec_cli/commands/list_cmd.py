@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Optional
 
 import typer
-from rich.table import Table
 from rich import box
+from rich.table import Table
 
-from ..models import SpecStatus, STATUS_STYLE
-from ..storage import list_specs, find_root
+from ..models import STATUS_STYLE, SpecStatus
+from ..storage import find_root, list_specs, open_blockers
 from ..ui import console, error
 
 STALE_DAYS = 3
@@ -21,8 +21,15 @@ def _age_days(dt: datetime) -> int:
 
 
 def cmd_list(
-    status: Optional[str], stale: bool, json_out: bool, root: Path,
-    full: bool = False, assignee: Optional[str] = None, claimable: bool = False,
+    status: Optional[str],
+    stale: bool,
+    json_out: bool,
+    root: Path,
+    full: bool = False,
+    assignee: Optional[str] = None,
+    claimable: bool = False,
+    blocked: bool = False,
+    parent: Optional[str] = None,
 ) -> None:
     root = find_root(root)
     filter_status: Optional[SpecStatus] = None
@@ -32,20 +39,40 @@ def cmd_list(
             filter_status = SpecStatus(status)
         except ValueError:
             valid = ", ".join(s.value for s in SpecStatus)
-            error(f"Invalid status. Valid: {valid}", json_out, {"error": "invalid_status", "valid": valid})
+            error(
+                f"Invalid status. Valid: {valid}",
+                json_out,
+                {"error": "invalid_status", "valid": valid},
+            )
 
+    all_specs = list_specs(root)
     specs = list_specs(root, filter_status)
 
     if stale:
-        specs = [s for s in specs
-                 if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
-                 and _age_days(s.updated_at) >= STALE_DAYS]
+        specs = [
+            s
+            for s in specs
+            if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
+            and _age_days(s.updated_at) >= STALE_DAYS
+        ]
 
     if assignee:
         specs = [s for s in specs if assignee.lower() in (s.assignee or "").lower()]
 
     if claimable:
-        specs = [s for s in specs if s.status == SpecStatus.APPROVED and not s.assignee]
+        specs = [
+            s
+            for s in specs
+            if s.status == SpecStatus.APPROVED
+            and not s.assignee
+            and not open_blockers(s, all_specs)
+        ]
+
+    if blocked:
+        specs = [s for s in specs if open_blockers(s, all_specs)]
+
+    if parent:
+        specs = [s for s in specs if s.parent == parent.zfill(4)]
 
     if json_out:
         typer.echo(json.dumps([s.to_dict(include_body=full) for s in specs]))
@@ -55,11 +82,13 @@ def cmd_list(
         if stale:
             console.print("[dim]No stale specs — everything is moving.[/dim]")
         else:
-            console.print("[dim]No specs found.[/dim] Run [cyan]spec new \"My spec\"[/cyan]")
+            console.print('[dim]No specs found.[/dim] Run [cyan]spec new "My spec"[/cyan]')
         return
 
     has_assignees = any(s.assignee for s in specs)
-    table = Table(box=box.ROUNDED, border_style="dim", header_style="bold", show_lines=False, pad_edge=True)
+    table = Table(
+        box=box.ROUNDED, border_style="dim", header_style="bold", show_lines=False, pad_edge=True
+    )
     table.add_column("ID", style="bold dim", width=6, no_wrap=True)
     table.add_column("Title", min_width=20)
     table.add_column("Status", width=18)
@@ -72,11 +101,15 @@ def cmd_list(
         icon, color = STATUS_STYLE[s.status]
         days = _age_days(s.updated_at)
         age_str = f"{days}d" if days > 0 else "today"
-        is_stale = days >= STALE_DAYS and s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
+        is_stale = days >= STALE_DAYS and s.status not in (
+            SpecStatus.IMPLEMENTED,
+            SpecStatus.CLOSED,
+        )
         age_style = "[red]" if is_stale else "[dim]"
         age_close = "[/red]" if is_stale else "[/dim]"
         row_args = [
-            s.id, s.title,
+            s.id,
+            s.title,
             f"[{color}]{icon} {s.status.value}[/{color}]",
             f"{age_style}{age_str}{age_close}",
         ]
