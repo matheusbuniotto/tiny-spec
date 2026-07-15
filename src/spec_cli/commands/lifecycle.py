@@ -126,26 +126,26 @@ def _do_transition(
                 },
             )
 
-    # Kata gate enforcement — runs before entering at-gate
+    # Check gate enforcement — runs before entering at-gate
     if target == SpecStatus.AT_GATE:
         cfg = load_config(root)
         if cfg.katas and not skip_kata:
             if not json_out:
                 console.print(
-                    f"[dim]Running {len(cfg.katas)} kata{'s' if len(cfg.katas) != 1 else ''} before gate...[/dim]\n"
+                    f"[dim]Running {len(cfg.katas)} check{'s' if len(cfg.katas) != 1 else ''} before gate...[/dim]\n"
                 )
             results, all_passed = run_katas_for_spec(root, spec_id)
             if not all_passed:
                 failed = [r["name"] for r in results if not r["passed"]]
                 if json_out:
                     error(
-                        f"Kata failures block gate: {', '.join(failed)}",
+                        f"Check failures block gate: {', '.join(failed)}",
                         json_out,
                         {
-                            "error": "kata_failed",
+                            "error": "checks_failed",
                             "failed": failed,
                             "results": results,
-                            "hint": "Run spec run-kata to see details, or use --skip-kata --note 'reason' to override",
+                            "hint": "Run spec verify to see details, or use --skip-checks --note 'reason' to override",
                         },
                     )
                 console.print()
@@ -156,12 +156,12 @@ def _do_transition(
             if not json_out and results:
                 passed_count = sum(1 for r in results if r["passed"])
                 console.print(
-                    f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} katas passed[/dim]\n"
+                    f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} checks passed[/dim]\n"
                 )
         elif skip_kata and cfg.katas:
             if not json_out:
                 reason_str = f" — {skip_kata_reason}" if skip_kata_reason else ""
-                console.print(f"  [yellow]⚠ Katas skipped{reason_str}[/yellow]\n")
+                console.print(f"  [yellow]⚠ Checks skipped{reason_str}[/yellow]\n")
 
     cfg = load_config(root)
     try:

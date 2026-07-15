@@ -1,4 +1,5 @@
 """Generate CLAUDE.md from project config and constitution."""
+
 from __future__ import annotations
 
 from ..config import Config
@@ -12,8 +13,12 @@ def generate_claude_md(cfg: Config, project_name: str) -> str:
     libraries = ", ".join(cfg.libraries) if cfg.libraries else "—"
     testing = cfg.testing or "—"
     architecture = cfg.architecture or "—"
-    conventions = "\n".join(f"- {c}" for c in cfg.conventions) if cfg.conventions else "- (none defined)"
-    out_of_bounds = "\n".join(f"- {c}" for c in cfg.out_of_bounds) if cfg.out_of_bounds else "- (none defined)"
+    conventions = (
+        "\n".join(f"- {c}" for c in cfg.conventions) if cfg.conventions else "- (none defined)"
+    )
+    out_of_bounds = (
+        "\n".join(f"- {c}" for c in cfg.out_of_bounds) if cfg.out_of_bounds else "- (none defined)"
+    )
 
     return f"""# {name}
 
@@ -44,7 +49,7 @@ def generate_claude_md(cfg: Config, project_name: str) -> str:
 ## Session start — always run these first
 
 ```bash
-spec config --json           # stack, conventions, katas, out_of_bounds
+spec config --json           # stack, conventions, checks, out_of_bounds
 spec export --active --json  # all active specs + bodies + constitution + git history
 spec next --json             # highest-priority action right now
 ```
@@ -74,14 +79,14 @@ spec new "<title>" --template <feature|bug|adr|api|data-pipeline|experiment> --a
 spec review <id> --json              # AI pre-flight: APPROVE / NEEDS WORK / REJECT
 spec advance <id> --yes --json
 spec advance <id> --note "..." --yes --json
-spec advance <id> --skip-kata --note "reason" --yes --json
+spec advance <id> --skip-checks --note "reason" --yes --json
 spec revert <id> --yes --json
 spec close <id> --reason <descoped|wont-fix|superseded|duplicate> --note "..." --yes --json
 spec assign <id> "<name>" --json
 
 # Quality
-spec run-kata --json
-spec run-kata <id> --json
+spec verify --json
+spec verify <id> --json
 spec gate-check <id> --json
 
 # Context & git
@@ -100,7 +105,7 @@ draft → approved → in-progress → at-gate → implemented
 ```
 
 - `at-gate → implemented` requires explicit human verification — never pass automatically
-- Katas (if configured) block `in-progress → at-gate` automatically
+- Checks (if configured) block `in-progress → at-gate` automatically
 - `.spec/log.md` is an append-only record of all transitions
 
 ---
@@ -139,7 +144,7 @@ spec-manager (creates + approves spec)
 | File | Purpose |
 |---|---|
 | `.spec/constitution.md` | Governing principles — read before any decision |
-| `.spec/config.yaml` | Stack, katas, conventions, out_of_bounds |
+| `.spec/config.yaml` | Stack, checks, conventions, out_of_bounds |
 | `.spec/log.md` | Append-only event log |
 | `.spec/git-context.md` | Recent git history for AI context |
 | `.spec/specs/` | Active feature, bug, api, data-pipeline, experiment specs |

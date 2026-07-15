@@ -1,4 +1,5 @@
-"""Scan the project and auto-configure katas (pre-gate checks) in config.yaml."""
+"""Scan the project and auto-configure pre-gate checks in config.yaml."""
+
 from __future__ import annotations
 
 import json
@@ -7,16 +8,16 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from rich import box
 from rich.panel import Panel
 from rich.table import Table
-from rich import box
 
-from ..config import load_config, save_config, Kata
-from ..ui import console, success, error
-
+from ..config import Kata, load_config, save_config
+from ..ui import console, error, success
 
 # Each detector: (name, description, detect_fn, command)
 # detect_fn takes root Path, returns True if this tool is present
+
 
 def _has_file(root: Path, *names: str) -> bool:
     return any((root / n).exists() for n in names)
@@ -40,9 +41,7 @@ def _has_dep(root: Path, dep: str) -> bool:
 def _cmd_exists(cmd: str) -> bool:
     """Check if a command is available on PATH."""
     try:
-        subprocess.run(
-            ["which", cmd], capture_output=True, timeout=5
-        )
+        subprocess.run(["which", cmd], capture_output=True, timeout=5)
         return True
     except Exception:
         return False
@@ -54,7 +53,9 @@ _DETECTORS: list[dict] = [
     {
         "name": "tests",
         "description": "Test suite must pass",
-        "detect": lambda r: _has_dep(r, "pytest") or (r / "pytest.ini").exists() or (r / "conftest.py").exists(),
+        "detect": lambda r: (
+            _has_dep(r, "pytest") or (r / "pytest.ini").exists() or (r / "conftest.py").exists()
+        ),
         "command": "pytest",
         "category": "test",
     },
@@ -122,7 +123,18 @@ _DETECTORS: list[dict] = [
     {
         "name": "lint",
         "description": "No linting errors",
-        "detect": lambda r: _has_file(r, ".eslintrc", ".eslintrc.js", ".eslintrc.json", ".eslintrc.yml", "eslint.config.js", "eslint.config.mjs") or _has_dep(r, "eslint"),
+        "detect": lambda r: (
+            _has_file(
+                r,
+                ".eslintrc",
+                ".eslintrc.js",
+                ".eslintrc.json",
+                ".eslintrc.yml",
+                "eslint.config.js",
+                "eslint.config.mjs",
+            )
+            or _has_dep(r, "eslint")
+        ),
         "command": "npx eslint .",
         "category": "lint",
     },
@@ -130,7 +142,9 @@ _DETECTORS: list[dict] = [
     {
         "name": "lint",
         "description": "No linting errors",
-        "detect": lambda r: (r / "go.mod").exists() and _has_file(r, ".golangci.yml", ".golangci.yaml"),
+        "detect": lambda r: (
+            (r / "go.mod").exists() and _has_file(r, ".golangci.yml", ".golangci.yaml")
+        ),
         "command": "golangci-lint run",
         "category": "lint",
     },
@@ -176,7 +190,10 @@ _DETECTORS: list[dict] = [
     {
         "name": "format",
         "description": "Code is formatted",
-        "detect": lambda r: _has_dep(r, "prettier") or _has_file(r, ".prettierrc", ".prettierrc.js", ".prettierrc.json"),
+        "detect": lambda r: (
+            _has_dep(r, "prettier")
+            or _has_file(r, ".prettierrc", ".prettierrc.js", ".prettierrc.json")
+        ),
         "command": "npx prettier --check .",
         "category": "format",
     },
@@ -206,7 +223,7 @@ _DETECTORS: list[dict] = [
 
 
 def _detect_checks(root: Path) -> list[Kata]:
-    """Scan project and return detected katas, one per category."""
+    """Scan project and return detected checks, one per category."""
     seen_categories: set[str] = set()
     results: list[Kata] = []
 
@@ -216,7 +233,9 @@ def _detect_checks(root: Path) -> list[Kata]:
             continue
         try:
             if d["detect"](root):
-                results.append(Kata(name=d["name"], command=d["command"], description=d["description"]))
+                results.append(
+                    Kata(name=d["name"], command=d["command"], description=d["description"])
+                )
                 seen_categories.add(cat)
         except Exception:
             continue
@@ -226,6 +245,7 @@ def _detect_checks(root: Path) -> list[Kata]:
 
 def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
     from ..storage import find_root
+
     root = find_root(root)
     cfg = load_config(root)
 
@@ -233,12 +253,14 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
 
     if not detected:
         if json_out:
-            typer.echo(json.dumps({"detected": [], "written": False, "message": "No checks detected"}))
+            typer.echo(
+                json.dumps({"detected": [], "written": False, "message": "No checks detected"})
+            )
         else:
             console.print(
                 "[dim]No test/lint/typecheck tools detected.[/dim]\n\n"
                 "[dim]Manually add checks to[/dim] [cyan].spec/config.yaml[/cyan]:\n\n"
-                "[dim]katas:\n"
+                "[dim]checks:\n"
                 "  - name: tests\n"
                 "    command: pytest\n"
                 "    description: Test suite must pass[/dim]"
@@ -247,20 +269,28 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
 
     if json_out:
         if cfg.katas and not yes:
-            typer.echo(json.dumps({
-                "detected": [k.to_dict() for k in detected],
-                "existing": [k.to_dict() for k in cfg.katas],
-                "written": False,
-                "message": "Checks already configured. Use --yes to overwrite.",
-            }))
+            typer.echo(
+                json.dumps(
+                    {
+                        "detected": [k.to_dict() for k in detected],
+                        "existing": [k.to_dict() for k in cfg.katas],
+                        "written": False,
+                        "message": "Checks already configured. Use --yes to overwrite.",
+                    }
+                )
+            )
             return
 
         cfg.katas = detected
         save_config(cfg, root)
-        typer.echo(json.dumps({
-            "detected": [k.to_dict() for k in detected],
-            "written": True,
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "detected": [k.to_dict() for k in detected],
+                    "written": True,
+                }
+            )
+        )
         return
 
     # Human-facing output
@@ -272,11 +302,14 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
     for k in detected:
         table.add_row(k.name, k.command, k.description)
 
-    console.print(Panel(
-        table,
-        title="[bold bright_blue]Detected checks[/bold bright_blue]",
-        box=box.ROUNDED, border_style="bright_blue",
-    ))
+    console.print(
+        Panel(
+            table,
+            title="[bold bright_blue]Detected checks[/bold bright_blue]",
+            box=box.ROUNDED,
+            border_style="bright_blue",
+        )
+    )
 
     if cfg.katas:
         existing_cmds = ", ".join(k.command for k in cfg.katas)
@@ -284,10 +317,12 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
 
     if not yes:
         import questionary
+
         style = questionary.Style([("question", "bold cyan"), ("answer", "bold white")])
         do_write = questionary.confirm(
             "Write these checks to .spec/config.yaml?",
-            default=True, style=style,
+            default=True,
+            style=style,
         ).ask()
         if not do_write:
             console.print("[dim]Cancelled.[/dim]")
@@ -295,9 +330,13 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
 
     cfg.katas = detected
     save_config(cfg, root)
-    success("checks", (
-        f"[bright_green]Wrote {len(detected)} check{'s' if len(detected) != 1 else ''}[/bright_green] "
-        f"to [cyan].spec/config.yaml[/cyan]\n\n"
-        f"  [dim]Run them:[/dim] [cyan]spec run-kata[/cyan]\n"
-        f"  [dim]They auto-run before[/dim] [magenta]at-gate[/magenta]"
-    ), border="bright_blue")
+    success(
+        "checks",
+        (
+            f"[bright_green]Wrote {len(detected)} check{'s' if len(detected) != 1 else ''}[/bright_green] "
+            f"to [cyan].spec/config.yaml[/cyan]\n\n"
+            f"  [dim]Run them:[/dim] [cyan]spec verify[/cyan]\n"
+            f"  [dim]They auto-run before[/dim] [magenta]at-gate[/magenta]"
+        ),
+        border="bright_blue",
+    )

@@ -9,6 +9,7 @@ import yaml
 @dataclass
 class Kata:
     """A named harness step that must pass before a spec can enter at-gate."""
+
     name: str
     command: str
     description: str = ""
@@ -21,14 +22,14 @@ class Kata:
 class Config:
     # Tooling
     author: str = ""
-    ai_provider: str = "claude-code"   # claude-code | anthropic | openai
-    ai_model: str = ""                 # leave blank to use provider default
-    ai_base_url: str = ""              # for openai provider (Ollama, Groq, etc.)
+    ai_provider: str = "claude-code"  # claude-code | anthropic | openai
+    ai_model: str = ""  # leave blank to use provider default
+    ai_base_url: str = ""  # for openai provider (Ollama, Groq, etc.)
     default_template: str = "feature"
-    git_auto_commit: bool = True       # auto-commit .spec/ on transitions
+    git_auto_commit: bool = True  # auto-commit .spec/ on transitions
 
     # Kata harness — commands that must pass before entering at-gate
-    katas: list = field(default_factory=list)   # list of Kata objects
+    katas: list = field(default_factory=list)  # list of Kata objects
 
     # Project context — used to enrich AI drafts
     project_name: str = ""
@@ -36,8 +37,8 @@ class Config:
     languages: list = field(default_factory=list)
     frameworks: list = field(default_factory=list)
     libraries: list = field(default_factory=list)
-    testing: str = ""          # e.g. "pytest, coverage > 80%, no mocks for DB"
-    architecture: str = ""     # e.g. "hexagonal, event-driven"
+    testing: str = ""  # e.g. "pytest, coverage > 80%, no mocks for DB"
+    architecture: str = ""  # e.g. "hexagonal, event-driven"
     conventions: list = field(default_factory=list)  # e.g. ["snake_case", "REST not GraphQL"]
     out_of_bounds: list = field(default_factory=list)  # things never to do
 
@@ -65,16 +66,29 @@ class Config:
         if self.out_of_bounds:
             lines.append(f"Out of bounds: {', '.join(self.out_of_bounds)}")
         if self.katas:
-            kata_names = ", ".join(f"{k.name} (`{k.command}`)" for k in self.katas)
-            lines.append(f"Katas (must pass before at-gate): {kata_names}")
+            check_names = ", ".join(f"{k.name} (`{k.command}`)" for k in self.katas)
+            lines.append(f"Checks (must pass before at-gate): {check_names}")
         return "\n".join(lines)
 
 
 _KNOWN_FIELDS = {
-    "author", "ai_provider", "ai_model", "ai_base_url", "default_template",
-    "git_auto_commit", "katas",
-    "project_name", "description", "languages", "frameworks",
-    "libraries", "testing", "architecture", "conventions", "out_of_bounds",
+    "author",
+    "ai_provider",
+    "ai_model",
+    "ai_base_url",
+    "default_template",
+    "git_auto_commit",
+    "katas",
+    "checks",
+    "project_name",
+    "description",
+    "languages",
+    "frameworks",
+    "libraries",
+    "testing",
+    "architecture",
+    "conventions",
+    "out_of_bounds",
 }
 
 
@@ -88,15 +102,17 @@ def load_config(root: Path) -> Config:
         return Config()
     extra = {k: v for k, v in data.items() if k not in _KNOWN_FIELDS}
 
-    raw_katas = data.get("katas") or []
+    raw_katas = data.get("checks") or data.get("katas") or []
     katas = []
     for k in raw_katas:
         if isinstance(k, dict) and "name" in k and "command" in k:
-            katas.append(Kata(
-                name=k["name"],
-                command=k["command"],
-                description=k.get("description", ""),
-            ))
+            katas.append(
+                Kata(
+                    name=k["name"],
+                    command=k["command"],
+                    description=k.get("description", ""),
+                )
+            )
 
     return Config(
         author=data.get("author", ""),
@@ -130,7 +146,7 @@ def save_config(config: Config, root: Path) -> None:
     data["default_template"] = config.default_template
     data["git_auto_commit"] = config.git_auto_commit
     if config.katas:
-        data["katas"] = [k.to_dict() for k in config.katas]
+        data["checks"] = [k.to_dict() for k in config.katas]
     # Project context
     if config.project_name:
         data["project_name"] = config.project_name

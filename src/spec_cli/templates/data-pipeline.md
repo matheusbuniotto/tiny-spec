@@ -41,7 +41,7 @@
 
 ## Data Quality Checks
 
-> These become kata entries. Each check must be automatable.
+> These become check entries in config.yaml. Each check must be automatable.
 
 - [ ] **Row count**: output has at least N rows (or delta from yesterday is within ±X%)
 - [ ] **Null check**: `[key field]` has 0 nulls
