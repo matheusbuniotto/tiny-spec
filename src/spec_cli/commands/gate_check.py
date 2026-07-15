@@ -21,7 +21,7 @@ _GATE_CHECKLIST_RE = re.compile(
 )
 
 
-def _extract_gate_checklist(body: str) -> str:
+def extract_gate_checklist(body: str) -> str:
     m = _GATE_CHECKLIST_RE.search(body)
     if not m:
         return ""
@@ -49,7 +49,7 @@ def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
     if not spec:
         not_found(spec_id, json_out)
 
-    checklist = _extract_gate_checklist(spec.body)
+    checklist = extract_gate_checklist(spec.body)
     gate_mode = effective_gate(spec, load_config(root))
 
     if json_out:

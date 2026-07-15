@@ -10,10 +10,10 @@ import typer
 from rich import box
 from rich.panel import Panel
 
-from ..models import SpecStatus
-from ..storage import find_root, list_specs
+from ..models import Spec, SpecStatus
+from ..storage import children_of, find_root, list_specs
 from ..ui import console, with_help
-from .gate_check import _extract_gate_checklist
+from .gate_check import extract_gate_checklist
 
 STALE_DAYS = 3
 
@@ -22,7 +22,11 @@ def _age_days(dt: datetime) -> int:
     return (datetime.utcnow() - dt).days
 
 
-def _find_cycles(by_id: dict) -> list[list[str]]:
+def _finding(kind: str, spec_id: str, message: str, hint: str) -> dict:
+    return {"type": kind, "spec_id": spec_id, "message": message, "hint": hint}
+
+
+def _find_cycles(by_id: dict[str, Spec]) -> list[list[str]]:
     """DFS over blocked_by edges; returns each distinct cycle once."""
     cycles: list[list[str]] = []
     seen: set[frozenset] = set()
@@ -45,8 +49,8 @@ def _find_cycles(by_id: dict) -> list[list[str]]:
     return cycles
 
 
-def _findings(all_specs: list) -> list[dict]:
-    by_id: dict = {}
+def _findings(all_specs: list[Spec]) -> list[dict]:
+    by_id: dict[str, Spec] = {}
     dupes: set[str] = set()
     for s in all_specs:
         if s.id in by_id:
@@ -58,42 +62,42 @@ def _findings(all_specs: list) -> list[dict]:
 
     for dupe_id in sorted(dupes):
         findings.append(
-            {
-                "type": "duplicate_id",
-                "spec_id": dupe_id,
-                "message": f"Spec ID {dupe_id} is used by more than one file",
-                "hint": f"Renumber one of the duplicate {dupe_id} files to a free ID",
-            }
+            _finding(
+                "duplicate_id",
+                dupe_id,
+                f"Spec ID {dupe_id} is used by more than one file",
+                f"Renumber one of the duplicate {dupe_id} files to a free ID",
+            )
         )
 
     for s in all_specs:
         for b in s.blocked_by:
             if b not in by_id:
                 findings.append(
-                    {
-                        "type": "dangling_blocked_by",
-                        "spec_id": s.id,
-                        "message": f"{s.id} is blocked_by '{b}', which doesn't exist",
-                        "hint": f"Edit {s.id}'s blocked_by to remove or fix '{b}'",
-                    }
+                    _finding(
+                        "dangling_blocked_by",
+                        s.id,
+                        f"{s.id} is blocked_by '{b}', which doesn't exist",
+                        f"Edit {s.id}'s blocked_by to remove or fix '{b}'",
+                    )
                 )
         if s.parent and s.parent not in by_id:
             findings.append(
-                {
-                    "type": "dangling_parent",
-                    "spec_id": s.id,
-                    "message": f"{s.id} has parent '{s.parent}', which doesn't exist",
-                    "hint": f"Edit {s.id}'s parent to remove or fix '{s.parent}'",
-                }
+                _finding(
+                    "dangling_parent",
+                    s.id,
+                    f"{s.id} has parent '{s.parent}', which doesn't exist",
+                    f"Edit {s.id}'s parent to remove or fix '{s.parent}'",
+                )
             )
         if s.status == SpecStatus.IN_PROGRESS and not s.assignee:
             findings.append(
-                {
-                    "type": "unassigned_in_progress",
-                    "spec_id": s.id,
-                    "message": f"{s.id} is in-progress with no assignee",
-                    "hint": f"spec assign {s.id} <name>, or revert to approved",
-                }
+                _finding(
+                    "unassigned_in_progress",
+                    s.id,
+                    f"{s.id} is in-progress with no assignee",
+                    f"spec assign {s.id} <name>, or revert to approved",
+                )
             )
         if (
             s.status == SpecStatus.IN_PROGRESS
@@ -101,47 +105,46 @@ def _findings(all_specs: list) -> list[dict]:
             and _age_days(s.updated_at) >= STALE_DAYS
         ):
             findings.append(
-                {
-                    "type": "stale_claim",
-                    "spec_id": s.id,
-                    "message": f"{s.id} claimed by {s.assignee}, no movement for "
-                    f"{_age_days(s.updated_at)}d",
-                    "hint": f"Finish and advance {s.id}, or release the claim if it's abandoned",
-                }
+                _finding(
+                    "stale_claim",
+                    s.id,
+                    f"{s.id} claimed by {s.assignee}, no movement for {_age_days(s.updated_at)}d",
+                    f"Finish and advance {s.id}, or release the claim if it's abandoned",
+                )
             )
-        if s.status == SpecStatus.AT_GATE and not _extract_gate_checklist(s.body):
+        if s.status == SpecStatus.AT_GATE and not extract_gate_checklist(s.body):
             findings.append(
-                {
-                    "type": "missing_gate_checklist",
-                    "spec_id": s.id,
-                    "message": f"{s.id} is at-gate but has no Human Gate Checklist section",
-                    "hint": f"Add a '## Human Gate Checklist' section to {s.id}",
-                }
+                _finding(
+                    "missing_gate_checklist",
+                    s.id,
+                    f"{s.id} is at-gate but has no Human Gate Checklist section",
+                    f"Add a '## Human Gate Checklist' section to {s.id}",
+                )
             )
         if s.template == "map" and s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED):
-            children = [c for c in all_specs if c.parent == s.id]
+            children = children_of(s.id, all_specs)
             if children and all(
                 c.status in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED) for c in children
             ):
                 findings.append(
-                    {
-                        "type": "map_ready_to_close",
-                        "spec_id": s.id,
-                        "message": f"{s.id} is a map whose children are all done, but it's still "
+                    _finding(
+                        "map_ready_to_close",
+                        s.id,
+                        f"{s.id} is a map whose children are all done, but it's still "
                         f"{s.status.value}",
-                        "hint": f"spec advance {s.id} --yes",
-                    }
+                        f"spec advance {s.id} --yes",
+                    )
                 )
 
     for cycle in _find_cycles(by_id):
         ids = " → ".join(cycle + [cycle[0]])
         findings.append(
-            {
-                "type": "circular_blocked_by",
-                "spec_id": cycle[0],
-                "message": f"Circular blocked_by chain: {ids}",
-                "hint": f"Remove one blocked_by link in the cycle, e.g. edit {cycle[0]}",
-            }
+            _finding(
+                "circular_blocked_by",
+                cycle[0],
+                f"Circular blocked_by chain: {ids}",
+                f"Remove one blocked_by link in the cycle, e.g. edit {cycle[0]}",
+            )
         )
 
     return findings
