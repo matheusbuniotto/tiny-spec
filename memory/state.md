@@ -355,3 +355,28 @@ Going forward: implement each spec through its own lifecycle (approve → start
 into ergonomics fixes as they're hit.
 Files changed: .spec/ (new — specs 0001-0007, config.yaml, constitution.md,
 git-context.md), tasks/*.md (deleted, was gitignored).
+
+## Session 13: spec 0002 implemented — kata → checks, run-kata → verify
+
+First spec worked through its own full lifecycle (approve → in-progress → at-gate,
+each transition auto-committed by the tool itself, confirming git_auto_commit
+again). TDD via tracer bullets, 9 new tests in tests/test_verify_checks_rename.py:
+- config.py: `load_config` reads `checks:` (new) with `katas:` (legacy) fallback;
+  `save_config` writes only `checks:`. `Config.katas`/`Kata` class names kept as
+  internal (spec's own Technical Notes deprioritized that rename).
+- main.py: new visible `verify` command; `run-kata` kept as `hidden=True` alias,
+  same underlying `cmd_run_kata`. `--skip-checks` new visible flag; `--skip-kata`
+  kept as `hidden=True` alias, both OR'd together before passing through.
+- Swept all user-facing strings and JSON keys across kata.py, lifecycle.py (incl.
+  JSON error code `kata_failed` → `checks_failed`), config_cmd.py, export.py,
+  setup_checks.py, init.py/greenfield.py config.yaml scaffold comments, skill.md
+  (synced to SKILL.md), claude_md.py, agents.py, data-pipeline.md template.
+  `grep -ri kata README.md skill.md src/spec_cli/SKILL.md` → clean (AC3).
+- Found 17 pre-existing ruff lint errors (unrelated unused imports) — confirmed
+  via `git stash` they predate this change, left alone (task 0006's job).
+Spec 0002 is `at-gate`, gate-check reviewed — waiting on human pass, not
+auto-advanced (that gate belongs to the human, same rule the tool teaches agents).
+Files changed: src/spec_cli/config.py, main.py, commands/{kata,lifecycle,
+config_cmd,export,setup_checks,init,greenfield}.py, scaffold/{claude_md,agents}.py,
+templates/data-pipeline.md, skill.md, src/spec_cli/SKILL.md,
+tests/test_verify_checks_rename.py (new).

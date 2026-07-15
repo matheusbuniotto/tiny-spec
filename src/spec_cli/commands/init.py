@@ -57,8 +57,8 @@ ai_base_url: ""                   # openai provider only (Ollama, Groq, etc.)
 default_template: feature         # feature | bug | adr | api
 git_auto_commit: true             # auto-commit .spec/ on lifecycle transitions
 
-# --- Kata harness (must pass before spec can enter at-gate) ---
-# katas:
+# --- Check harness (must pass before spec can enter at-gate) ---
+# checks:
 #   - name: tests
 #     command: pytest
 #     description: Full test suite must pass
@@ -68,7 +68,7 @@ git_auto_commit: true             # auto-commit .spec/ on lifecycle transitions
 #   - name: typecheck
 #     command: mypy src
 #     description: No type errors
-katas: []
+checks: []
 
 # --- Project context (enriches AI drafts) ---
 project_name: ""

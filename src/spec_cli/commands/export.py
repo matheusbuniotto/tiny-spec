@@ -1,4 +1,5 @@
 """Export all spec context into a single AI-ingestible payload."""
+
 from __future__ import annotations
 
 import json
@@ -6,14 +7,14 @@ from datetime import datetime
 from pathlib import Path
 
 import typer
-from rich.panel import Panel
-from rich.table import Table
-from rich.rule import Rule
 from rich import box
+from rich.panel import Panel
+from rich.rule import Rule
+from rich.table import Table
 
 from ..config import load_config
-from ..models import SpecStatus, STATUS_STYLE
-from ..storage import list_specs, find_root, spec_dir
+from ..models import STATUS_STYLE, SpecStatus
+from ..storage import find_root, list_specs, spec_dir
 from ..ui import console
 
 
@@ -55,7 +56,7 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
             "architecture": cfg.architecture,
             "conventions": cfg.conventions,
             "out_of_bounds": cfg.out_of_bounds,
-            "katas": [k.to_dict() for k in cfg.katas],
+            "checks": [k.to_dict() for k in cfg.katas],
         },
         "constitution": constitution,
         "git_context": git_context,
@@ -73,12 +74,16 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
 
     # ── Rich preview ──────────────────────────────────────────────────────────
     console.print()
-    console.print(Panel(
-        f"[bold cyan]◈ spec export[/bold cyan]  [dim]{root}[/dim]\n"
-        f"[dim]{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}[/dim]"
-        + (f"  [yellow]· active only[/yellow]" if active_only else ""),
-        box=box.ROUNDED, border_style="bright_blue", padding=(0, 2),
-    ))
+    console.print(
+        Panel(
+            f"[bold cyan]◈ spec export[/bold cyan]  [dim]{root}[/dim]\n"
+            f"[dim]{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}[/dim]"
+            + (f"  [yellow]· active only[/yellow]" if active_only else ""),
+            box=box.ROUNDED,
+            border_style="bright_blue",
+            padding=(0, 2),
+        )
+    )
     console.print()
 
     # Config summary
@@ -96,18 +101,30 @@ def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
     if cfg.testing:
         cfg_table.add_row("testing", cfg.testing)
     if cfg.katas:
-        cfg_table.add_row("katas", "  ".join(f"[magenta]{k.name}[/magenta]" for k in cfg.katas))
+        cfg_table.add_row("checks", "  ".join(f"[magenta]{k.name}[/magenta]" for k in cfg.katas))
     if cfg.out_of_bounds:
         cfg_table.add_row("out of bounds", "  ".join(f"[red]{o}[/red]" for o in cfg.out_of_bounds))
-    console.print(Panel(cfg_table, title="[bold]Project context[/bold]", box=box.ROUNDED,
-                        border_style="dim", padding=(0, 1)))
+    console.print(
+        Panel(
+            cfg_table,
+            title="[bold]Project context[/bold]",
+            box=box.ROUNDED,
+            border_style="dim",
+            padding=(0, 1),
+        )
+    )
 
     # Spec list grouped by status
     console.print()
-    active_statuses = [s for s in SpecStatus if s not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)]
+    active_statuses = [
+        s for s in SpecStatus if s not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
+    ]
     done_statuses = [SpecStatus.IMPLEMENTED, SpecStatus.CLOSED]
 
-    for group_label, group_statuses in [("Active", active_statuses), ("Completed / Closed", done_statuses)]:
+    for group_label, group_statuses in [
+        ("Active", active_statuses),
+        ("Completed / Closed", done_statuses),
+    ]:
         group_specs = [s for s in specs if s.status in group_statuses]
         if not group_specs:
             continue

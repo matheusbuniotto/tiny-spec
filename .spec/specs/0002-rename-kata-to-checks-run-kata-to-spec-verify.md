@@ -3,16 +3,24 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.045572'
-gate_notes: ''
+gate_notes: 'Renamed run-kata to verify (hidden alias kept), katas: to checks: in
+  config.yaml (legacy key still read), --skip-kata to --skip-checks (hidden alias
+  kept). Swept all user-facing strings/JSON keys (kata_failed->checks_failed error
+  code, katas->checks JSON field) in kata.py, lifecycle.py, config_cmd.py, export.py,
+  setup_checks.py, init.py, greenfield.py scaffolds, skill.md/SKILL.md, claude_md.py,
+  agents.py, data-pipeline.md template. Kept internal Python names (Kata class, kata.py,
+  cfg.katas attribute) unchanged per the spec''s own scope decision. grep -ri kata
+  README.md skill.md src/spec_cli/SKILL.md returns nothing. 20/20 tests pass, manually
+  verified spec verify/run-kata/--help in a scratch project.'
 id: '0002'
 parent: ''
-status: approved
+status: at-gate
 tags:
 - ergonomics
 - naming
 template: feature
 title: Rename kata to checks, run-kata to spec verify
-updated_at: '2026-07-15T11:19:01.319792'
+updated_at: '2026-07-15T11:33:44.336499'
 ---
 
 ## User Story

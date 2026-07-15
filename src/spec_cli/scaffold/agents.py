@@ -1,4 +1,5 @@
 """Agent definitions — written to .claude/agents/<name>.md on greenfield init."""
+
 from __future__ import annotations
 
 
@@ -14,7 +15,6 @@ description: {description}
 
 
 AGENTS: list[tuple[str, str]] = [
-
     # ── spec-manager ─────────────────────────────────────────────────────────
     _agent(
         name="spec-manager",
@@ -57,11 +57,11 @@ When the user describes a feature, bug, data pipeline, experiment, or architectu
 ```bash
 spec advance <id> --yes --json                           # draft→approved, approved→in-progress
 spec advance <id> --note "what the reviewer must check" --yes --json  # in-progress→at-gate
-spec advance <id> --skip-kata --note "reason" --yes --json            # override kata block
+spec advance <id> --skip-checks --note "reason" --yes --json          # override check block
 ```
 
-Katas run automatically before `in-progress → at-gate`. If they fail, fix them or get
-explicit human approval before using `--skip-kata`.
+Checks run automatically before `in-progress → at-gate`. If they fail, fix them or get
+explicit human approval before using `--skip-checks`.
 
 ## The human gate — you CANNOT pass this yourself
 `at-gate → implemented` requires a human. Every time:
@@ -94,7 +94,6 @@ spec close <id> --reason <descoped|wont-fix|superseded|duplicate> --note "<why>"
 - Gate notes must be specific — "tests pass" is not enough
 """,
     ),
-
     # ── architect ─────────────────────────────────────────────────────────────
     _agent(
         name="architect",
@@ -159,7 +158,6 @@ Structure:
 - After writing plan.md, list any open questions. Do not start implementation.
 """,
     ),
-
     # ── implementer ───────────────────────────────────────────────────────────
     _agent(
         name="implementer",
@@ -174,7 +172,7 @@ You are the implementer. You write code that makes specs pass their acceptance c
 ```bash
 spec show <id> --json       # read the spec: AC, out of scope, gate checklist
 spec config --json          # conventions, testing standards, out_of_bounds
-spec run-kata --json        # confirm katas pass on current main (baseline)
+spec verify --json          # confirm checks pass on current main (baseline)
 ```
 Also read: `plan.md` next to the spec file. If it doesn't exist, call the `architect` agent first.
 
@@ -188,24 +186,23 @@ For each acceptance criterion:
 Never implement more than one AC at a time without summarizing.
 
 ## When all ACs are implemented
-1. `spec run-kata --json` — run all katas. Fix any failures before continuing.
+1. `spec verify --json` — run all checks. Fix any failures before continuing.
 2. Self-review: re-read the spec's out-of-scope section. Remove anything that crept in.
 3. `spec advance <id> --note "<summary of what was implemented and verified>" --yes --json`
 
 The note must be specific:
 - Bad: "Feature is complete"
 - Good: "Implemented JWT auth middleware. POST /login returns token. Invalid creds return 401.
-  Expired token returns 401. Tests in test_auth.py — 12 tests, all pass. Kata: pytest green."
+  Expired token returns 401. Tests in test_auth.py — 12 tests, all pass. Check: pytest green."
 
 ## Rules
 - Follow `conventions` and `testing` from config.yaml exactly
 - Never violate `out_of_bounds` — stop and ask if implementation requires it
-- Never advance to `at-gate` if katas fail, unless given explicit permission
+- Never advance to `at-gate` if checks fail, unless given explicit permission
 - Keep changes focused — do not refactor unrelated code in the same commit
 - If an AC is impossible as written, flag it to the user before inventing an alternative
 """,
     ),
-
     # ── reviewer ──────────────────────────────────────────────────────────────
     _agent(
         name="reviewer",
@@ -273,7 +270,6 @@ spec config --json
 - After reporting, do not advance the spec — the spec-manager or human does that
 """,
     ),
-
     # ── tester ────────────────────────────────────────────────────────────────
     _agent(
         name="tester",
@@ -288,7 +284,7 @@ You are the test engineer. You make specs verifiable through automated tests.
 ```bash
 spec show <id> --json      # get acceptance criteria
 spec config --json         # testing standards: framework, coverage, mocking rules
-spec run-kata --json       # confirm current test suite baseline
+spec verify --json         # confirm current test suite baseline
 ```
 
 ## Test naming convention
@@ -320,7 +316,6 @@ After writing all tests:
 - Do not write tests that only test internal implementation details — test observable behaviour
 """,
     ),
-
     # ── explorer ──────────────────────────────────────────────────────────────
     _agent(
         name="explorer",
@@ -379,7 +374,6 @@ You can be pointed at: the full codebase, a module, a feature area, or a specifi
 - Cross-reference every finding against `.spec/constitution.md` and `config.yaml`
 """,
     ),
-
     # ── data-engineer ─────────────────────────────────────────────────────────
     _agent(
         name="data-engineer",
@@ -414,10 +408,10 @@ Read the spec's Source & Sink section. Verify:
 - [ ] Failure modes handled per spec's Failure & Recovery table
 - [ ] Monitoring/alerting configured per spec's Monitoring section
 
-### Kata entries to suggest
+### Check entries to suggest
 After implementation, suggest these additions to `.spec/config.yaml`:
 ```yaml
-katas:
+checks:
   - name: dq-<pipeline-name>
     command: python scripts/check_dq.py --pipeline <name> --date today
     description: Data quality checks for <pipeline>
@@ -448,7 +442,7 @@ If any of these are missing, do not implement — ask the user to complete the s
 
 ### Gate requirement
 Do not advance to `at-gate` without:
-1. Running katas (if configured)
+1. Running checks (if configured)
 2. Confirming events are live in staging
 3. Confirming randomisation is working (split is roughly as specified)
 
@@ -460,7 +454,6 @@ Do not advance to `at-gate` without:
 - Experiment decision criteria must be agreed before launch — ask if missing
 """,
     ),
-
     # ── run-reviewer ──────────────────────────────────────────────────────────
     _agent(
         name="run-reviewer",
@@ -527,5 +520,4 @@ Also review: the conversation history, any error messages, and corrections the u
 - After approval, edit the files directly and confirm what changed
 """,
     ),
-
 ]

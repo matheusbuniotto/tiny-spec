@@ -4,9 +4,9 @@ import json
 from pathlib import Path
 
 import typer
+from rich import box
 from rich.panel import Panel
 from rich.table import Table
-from rich import box
 
 from ..config import load_config
 from ..storage import find_root
@@ -18,18 +18,28 @@ def cmd_config_show(json_out: bool, root: Path) -> None:
     cfg = load_config(root)
 
     if json_out:
-        typer.echo(json.dumps({
-            "author": cfg.author, "ai_provider": cfg.ai_provider,
-            "ai_model": cfg.ai_model, "ai_base_url": cfg.ai_base_url,
-            "default_template": cfg.default_template,
-            "git_auto_commit": cfg.git_auto_commit,
-            "katas": [k.to_dict() for k in cfg.katas],
-            "project_name": cfg.project_name, "description": cfg.description,
-            "languages": cfg.languages, "frameworks": cfg.frameworks,
-            "libraries": cfg.libraries, "testing": cfg.testing,
-            "architecture": cfg.architecture, "conventions": cfg.conventions,
-            "out_of_bounds": cfg.out_of_bounds,
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "author": cfg.author,
+                    "ai_provider": cfg.ai_provider,
+                    "ai_model": cfg.ai_model,
+                    "ai_base_url": cfg.ai_base_url,
+                    "default_template": cfg.default_template,
+                    "git_auto_commit": cfg.git_auto_commit,
+                    "checks": [k.to_dict() for k in cfg.katas],
+                    "project_name": cfg.project_name,
+                    "description": cfg.description,
+                    "languages": cfg.languages,
+                    "frameworks": cfg.frameworks,
+                    "libraries": cfg.libraries,
+                    "testing": cfg.testing,
+                    "architecture": cfg.architecture,
+                    "conventions": cfg.conventions,
+                    "out_of_bounds": cfg.out_of_bounds,
+                }
+            )
+        )
         return
 
     table = Table(box=box.ROUNDED, border_style="dim", show_header=False, pad_edge=True)
@@ -59,7 +69,14 @@ def cmd_config_show(json_out: bool, root: Path) -> None:
     row("out_of_bounds", cfg.out_of_bounds)
     if cfg.katas:
         table.add_section()
-        kata_strs = [f"{k.name} ({k.command})" for k in cfg.katas]
-        row("katas", kata_strs)
+        check_strs = [f"{k.name} ({k.command})" for k in cfg.katas]
+        row("checks", check_strs)
 
-    console.print(Panel(table, title="[bold].spec/config.yaml[/bold]", box=box.ROUNDED, border_style="bright_blue"))
+    console.print(
+        Panel(
+            table,
+            title="[bold].spec/config.yaml[/bold]",
+            box=box.ROUNDED,
+            border_style="bright_blue",
+        )
+    )

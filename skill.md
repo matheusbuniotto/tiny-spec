@@ -3,7 +3,7 @@ name: spec
 description: >
   Drive the full tiny-spec lifecycle from Claude Code. Use when the user says
   "spec this", "add to specs", "what's in flight", "review that spec",
-  "what's blocking", "assign this", "search specs", "run katas",
+  "what's blocking", "assign this", "search specs", "run checks",
   "what's the pipeline health", or anything about spec status, lifecycle,
   search, stats, or assignment.
 ---
@@ -16,7 +16,7 @@ Never invent commands — only use what's listed here.
 ## Bootstrap (start of every session)
 
 ```bash
-spec config --json          # project stack, conventions, katas, out_of_bounds
+spec config --json          # project stack, conventions, checks, out_of_bounds
 spec export --active --json # all active specs with bodies + constitution + git history
 spec next --json            # single highest-priority action right now
 ```
@@ -56,7 +56,7 @@ spec show <id> --json                               # for a map, also renders li
 # Advance
 spec advance <id> --yes --json                      # auto-detects next state
 spec advance <id> --note "what to verify" --yes --json   # required for at-gate
-spec advance <id> --skip-kata --note "reason" --yes --json  # override kata check
+spec advance <id> --skip-checks --note "reason" --yes --json  # override check gate
 
 # Revert / close
 spec revert <id> --note "why" --yes --json
@@ -95,8 +95,8 @@ spec log --query "gate" --json
 spec setup-checks --yes --json  # scan project, auto-configure pre-gate checks
 spec review <id> --json         # AI pre-flight: APPROVE / NEEDS WORK / REJECT
 spec gate-check <id> --json     # show Human Gate Checklist
-spec run-kata --json            # run all katas, exit 1 on failure
-spec run-kata <id> --json       # same, scoped to a spec for context
+spec verify --json               # run all checks, exit 1 on failure
+spec verify <id> --json          # same, scoped to a spec for context
 ```
 
 ### Context & git
@@ -129,7 +129,7 @@ draft → approved → in-progress → at-gate → implemented
 ```
 
 - `at-gate → implemented` always requires a human. Never pass this yourself without explicit confirmation.
-- Katas (if configured) block `in-progress → at-gate` automatically.
+- Checks (if configured) block `in-progress → at-gate` automatically.
 - `blocked_by` (if set) blocks `approved → in-progress` automatically — a spec can't be claimed or started while any spec in its `blocked_by` list isn't `implemented`/`closed` yet. Set it with `spec new --blocked-by <id,id>`. `spec next` and `spec list --claimable` already skip blocked specs; use `spec list --blocked` to see what's stuck and why.
 
 ---
@@ -171,7 +171,7 @@ spec next --json                                             # 1. find top actio
 spec list --claimable --json                                 # (optional) browse all unclaimed approved specs
 spec claim <id> --yes --json                                 # 2. atomic claim: assert approved, assign, start
 # ... implement the work ...
-spec run-kata --json                                         # 3. katas must pass before gating
+spec verify --json                                            # 3. checks must pass before gating
 spec advance <id> --note "<delivery summary>" --yes --json  # 4. DELIVERY SIGNAL: in-progress → at-gate
 # The --note is the delivery receipt the human will read. Be specific:
 # "Implemented X. Tests: 12 pass. Edge case Y handled in file.py:42."
@@ -226,10 +226,10 @@ spec setup-checks --yes --json         # scans for pytest/ruff/mypy/eslint/tsc/c
 ## Workflow: "run the checks before gating"
 
 ```bash
-spec run-kata <id> --json              # run katas, exit 1 on failure
+spec verify <id> --json                 # run checks, exit 1 on failure
 # on failure: fix, then re-run
 # to skip with justification:
-spec advance <id> --skip-kata --note "<reason>" --yes --json
+spec advance <id> --skip-checks --note "<reason>" --yes --json
 ```
 
 ## Workflow: "give me full context for this project" (new AI session)
