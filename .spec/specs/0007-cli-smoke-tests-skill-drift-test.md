@@ -18,44 +18,38 @@ updated_at: '2026-07-15T11:16:51.798885'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As a **maintainer relying on CI to catch regressions**, I want **the CLI's actual command surface exercised by tests**, so that **CI (spec 0006) is verifying real behavior, not just that the test files that exist happen to pass**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> 23 commands, 2 test files before this backlog started, none exercising the CLI surface end-to-end. skill.md has drifted from the packaged `src/spec_cli/SKILL.md` copy twice already, silently, because nothing checks they match.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+Add `tests/test_cli.py` using Typer's `CliRunner` against a `tmp_path` git repo: golden path (`init` → `new` → `advance` ×4 with status assertions via `show --json`), `claim`/release flow, `doctor` clean + one seeded finding, and JSON shape assertions on `list`/`next`/`show`. Add `tests/test_skill_drift.py`: parse every `spec <subcommand>`/`--flag` mentioned in skill.md, assert each exists in the Typer app, and assert skill.md and `src/spec_cli/SKILL.md` are byte-identical.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: the golden-path CLI test passes and would fail if a lifecycle transition broke
+- [ ] **AC2**: deliberately editing only one of skill.md / SKILL.md fails the drift test
+- [ ] **AC3**: the full suite runs in under 10 seconds with no network calls and no real AI calls
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+No coverage targets, no AI-drafting integration tests beyond the existing `test_glossary.py` mock pattern.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+Depends on spec 0006 (CI) landing first so these tests run somewhere; easier to write after the `--json` non-interactive fix (already merged).
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+Coverage percentage targets, real AI provider calls in tests.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -63,10 +57,9 @@ updated_at: '2026-07-15T11:16:51.798885'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: run the new suite locally, confirm it passes; desync SKILL.md on purpose and confirm the drift test catches it
+- [ ] **Test the failure case**: run the golden-path test against a deliberately broken lifecycle transition, confirm it fails
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?

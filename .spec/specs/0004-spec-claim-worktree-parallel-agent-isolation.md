@@ -17,44 +17,38 @@ updated_at: '2026-07-15T11:16:51.354219'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As an **agent working alongside other agents**, I want **claiming a spec to give me an isolated worktree**, so that **parallel sessions never touch each other's files**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> Hard isolation beats coordination for parallel agent work, but tiny-spec's `claim` command only sets an assignee today — two agents claiming different specs still share one working directory and can clobber each other's edits.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+`spec claim <id> --agent <name> --worktree` additionally runs `git worktree add ../<repo>-spec-<id> -b spec/<id>-<slug>`, prints the path (and includes it in `--json` as `worktree`/`branch`), and is idempotent if the worktree/branch already exists. `spec advance`/`spec close` to a terminal state prints a reminder of the worktree path and the `git worktree remove` command — no auto-delete.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: `spec claim 0001 --agent bot --worktree` creates the directory and branch, and prints/returns the path
+- [ ] **AC2**: claiming the same spec with `--worktree` again reuses the existing worktree/branch instead of erroring
+- [ ] **AC3**: claiming without `--worktree` behaves exactly as it does today (no behavior change)
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+No auto-cleanup, no per-worktree env/db/port management — document "run your install step" in the hint instead of automating it.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+Auto-cleanup on close, dependency install inside the worktree, per-worktree environment management.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -62,10 +56,9 @@ updated_at: '2026-07-15T11:16:51.354219'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: in a scratch git repo, claim a spec with `--worktree`, `cd` into the printed path, confirm it's on the right branch and has the spec files
+- [ ] **Test the failure case**: claim the same spec with `--worktree` twice, confirm the second call reuses rather than errors
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?

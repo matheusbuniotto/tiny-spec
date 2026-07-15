@@ -17,44 +17,38 @@ updated_at: '2026-07-15T11:16:51.498167'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As a **user driving tiny-spec with a non-Claude agent** (Codex, Cursor, Copilot), I want **`spec init` to scaffold the tool-agnostic AGENTS.md convention**, so that **tiny-spec works with whatever agent I'm using, not just Claude Code**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> AGENTS.md is now the de facto universal agent-instruction format, read natively by Claude Code, Codex, Cursor, Copilot, and Gemini CLI. tiny-spec currently only scaffolds `.claude/skills/`, which is Claude-specific.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+`spec init` writes a short `AGENTS.md` at project root (skip + note if one already exists) covering: what tiny-spec is, the golden-path commands, where specs live, and a pointer to constitution.md — derived from the existing SKILL.md content so there's one source of truth, not a second hand-maintained copy. An optional Claude Code `SessionStart` hook (prompted in init, or a `--hooks` flag) runs `spec next --json` so every session opens with pipeline state visible.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: fresh `spec init --yes` produces an `AGENTS.md` at project root
+- [ ] **AC2**: running `spec init` again on a project with an existing `AGENTS.md` never overwrites it
+- [ ] **AC3**: the optional SessionStart hook is opt-in, not default-on
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+Generate AGENTS.md content from SKILL.md's existing sections rather than hand-writing a parallel doc that will drift.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+Rewriting the skill system; CI scaffolding for user projects (separate spec).
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -62,10 +56,9 @@ updated_at: '2026-07-15T11:16:51.498167'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: `spec init --yes` in a scratch dir, confirm AGENTS.md exists and documents the real command surface
+- [ ] **Test the failure case**: run `spec init` twice, confirm the second run doesn't clobber a hand-edited AGENTS.md
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?

@@ -17,55 +17,49 @@ updated_at: '2026-07-15T11:16:50.870347'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As an **agent driving the CLI**, I want **every output to tell me what to do next**, so that **I don't have to re-consult skill.md between every command**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> AXI-benchmark evidence (915 runs) shows next-command hints are the single biggest turn-count reducer for agents driving a CLI. tiny-spec's `--json` output today gives raw state but no guidance, and empty/error states are inconsistent (`spec list --json` on no matches returns a bare `[]`, not a count or explanation).
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+Every `--json` output gains a `"help": [...]` array of concrete next-command templates for the current state (e.g. `spec show` on a claimable spec suggests `spec advance 0001 --yes --json`). JSON errors get the same field with the exact recovery command. `spec list --json` wraps results in `{"count": N, "specs": [...]}`. Empty states are definitive and name the active filter. Long bodies get a truncation hint pointing at `--full`.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: `spec next --json`, `show`, `list`, `advance`, `claim` all emit a `help` array with at least one concrete command
+- [ ] **AC2**: `spec show 9999 --json` (not found) includes a `help` entry with a recovery command
+- [ ] **AC3**: `spec list --status at-gate --json` on an empty result returns `{"count": 0, "specs": []}` and human output names the filter ("0 specs match --status at-gate")
+- [ ] **AC4**: `spec export --full` / long bodies show `"(truncated, N chars — use spec show <id> --json)"` when truncated
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+One shared `help()` helper in `ui.py` that commands call with a list of suggestion strings; keep the schema additive (only new fields, nothing renamed or removed) so existing JSON consumers don't break.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None — builds on existing command surface.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+TOON output format (see backlog.md). Minimal-schema trimming of existing JSON fields — that's a breaking change, tracked separately in backlog.md.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
-- [ ] `.spec/` updated if any follow-on specs are needed
+- [ ] SKILL.md / skill.md document `help[]` and the `list` envelope (kept in sync)
 
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: run `spec next --json`, `spec show <id> --json`, `spec list --json` on a project with a few specs — confirm `help[]`/`count` appear and are sensible
+- [ ] **Test the failure case**: `spec show 9999 --json` — confirm structured error with `help`
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?

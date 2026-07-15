@@ -17,44 +17,38 @@ updated_at: '2026-07-15T11:16:51.045675'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As a **user reading `--help` for the first time**, I want **`kata` to say what it does**, so that **I don't have to learn tiny-spec's private vocabulary before using it**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> "Kata" is the one piece of CLI vocabulary that doesn't explain itself — everything else (`gate`, `claim`, `advance`) reads as English. It also collides with the planned `spec doctor` validator naming.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+`spec run-kata` becomes `spec verify` (hidden `run-kata` alias for one release). Config key `katas:` becomes `checks:` (old key still read, never written back as `katas:`). `--skip-kata` becomes `--skip-checks` (hidden alias). Do this before any other spec touches docs, so everything after uses final vocabulary.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: `spec verify` runs the configured checks; `spec run-kata` still works but is hidden from `--help`
+- [ ] **AC2**: A project with legacy `katas:` in config.yaml works unmodified
+- [ ] **AC3**: `grep -ri kata README.md skill.md src/spec_cli/SKILL.md` returns nothing
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+Rename internals (`Kata` model, `kata.py`) only where cheap; the user-facing surface is the priority.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None — do first so specs 0003+ document the final command names.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+`spec doctor` (separate spec) — different command, different concern.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -62,10 +56,9 @@ updated_at: '2026-07-15T11:16:51.045675'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: run `spec verify` on a project with checks configured, confirm it runs them; run `spec run-kata` and confirm it still works silently
+- [ ] **Test the failure case**: a project with an old `katas:` config.yaml still loads and runs correctly
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?

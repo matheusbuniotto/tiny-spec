@@ -17,44 +17,38 @@ updated_at: '2026-07-15T11:16:51.648675'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As a **maintainer merging PRs into tiny-spec itself**, I want **CI to catch broken tests and lint issues before merge**, so that **agent-written code passes the same bar as human-written code**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> tiny-spec has no CI. PRs #1–#4 all merged with zero automated verification. `[tool.ruff]` only sets `line-length`; mypy is declared as a dev dependency but has never been run.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+Add `.github/workflows/ci.yml`: on PR + push to main, `uv sync`, `ruff check`, `ruff format --check`, `pytest`. Add a real ruff rule selection (`E`, `F`, `I`, `UP`, `B`) and fix whatever it flags. Add tiny-spec's own `AGENTS.md` documenting build/test commands and the skill.md ↔ SKILL.md sync rule.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: CI is green on a no-op PR
+- [ ] **AC2**: CI fails red when a test is deliberately broken (verify once, then revert)
+- [ ] **AC3**: `ruff check` and `ruff format --check` pass locally with the new rule selection
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+One job, Python 3.11 (matches `requires-python`). mypy enablement is explicitly out of scope — it's never been run and cleaning that up is its own PR.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+mypy in CI, pre-commit hooks, coverage gates, release automation.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -62,10 +56,9 @@ updated_at: '2026-07-15T11:16:51.648675'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: open a throwaway PR with a trivial change, confirm the CI workflow runs and passes
+- [ ] **Test the failure case**: temporarily break a test, push, confirm CI goes red, then revert
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?

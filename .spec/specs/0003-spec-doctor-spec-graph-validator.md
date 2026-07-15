@@ -17,44 +17,38 @@ updated_at: '2026-07-15T11:16:51.198847'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As an **agent or CI pipeline**, I want **a deterministic command that validates the spec graph**, so that **I can catch broken references and stale state without a human reading every file**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> tiny-spec has no linter for the artifact it owns. Dangling `blocked_by`/`parent` references, stale claims, and maps whose children are all done but the map is still open currently go unnoticed until someone reads `spec list` closely.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+New command `spec doctor [--json]` checks: dangling `blocked_by`/`parent` refs, duplicate spec IDs, `in-progress` specs with no assignee, stale claims (reuse `STALE_DAYS`), maps with all children implemented/closed but still open, at-gate specs missing a Human Gate Checklist section, and circular `blocked_by` chains. Exit 0 when clean, 1 when findings — drops straight into CI.
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: clean project → `spec doctor` prints "no issues", exits 0
+- [ ] **AC2**: a spec with a dangling `blocked_by` ID is flagged with the spec ID and a fix hint
+- [ ] **AC3**: `spec doctor --json` returns `{"count": N, "findings": [...], "help": [...]}`
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+No AI involved — pure deterministic checks over `list_specs()`. Reuses `open_blockers`/`children_of` from storage.py.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+Auto-fixing (`--fix`) and action-classified findings (agent-verifiable vs human-only) — tracked in backlog.md, revisit after this proves out.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -62,10 +56,9 @@ updated_at: '2026-07-15T11:16:51.198847'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: seed a project with one dangling `blocked_by` ref, run `spec doctor`, confirm it's caught
+- [ ] **Test the failure case**: run `spec doctor` on a clean project, confirm exit 0 and no false positives
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?
