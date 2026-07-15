@@ -305,3 +305,33 @@ Fourth (last) bet from the session-8 improvement map: audit these three for redu
 - Drift detection uses file mtime vs `updated_at` frontmatter comparison
 - `spec next` prioritizes by status severity then age
 - Dashboard STALE_DAYS threshold is 3 (hardcoded for now)
+
+## Session 10: AI-first engineering mapping → tasks/ + backlog.md
+
+Researched AI-first eng practices (AXI principles from axi.md via Wayback, no-mistakes repo,
+AGENTS.md standard, worktree workflows). Found bug: `spec new --json` crashes on non-TTY stdin
+(questionary prompts fire without --yes). Produced:
+- `tasks/001`–`008` — PR-sized task files, product-first order: json-non-interactive fix,
+  agent output ergonomics (help[]/counts/truncation), kata→checks rename (`spec verify`),
+  `spec doctor`, `claim --worktree`, AGENTS.md scaffold, repo CI+ruff, CLI smoke + skill-drift tests.
+- `backlog.md` — deferred: token saving (minimal schemas, TOON, body-less), action-classified
+  gate items, doctor --fix, intent-verbatim wording, `init --ci`, mypy; rejected list (daemon/TUI/etc).
+Files changed: tasks/*.md (new), backlog.md (new).
+
+## Session 11: tasks/001 — `--json` implies non-interactive (bug fix)
+
+Two commands prompted via questionary even in `--json` mode when `--yes` was absent,
+crashing with an EOFError traceback on non-TTY stdin:
+- `new.py`: `if not yes:` gated all prompts, including title. Fixed to
+  `non_interactive = yes or json_out`; when non-interactive and title is missing,
+  errors with `{"error": "title_required"}` instead of silently creating an
+  empty-title spec (this was a latent gap even under `--yes` before the fix).
+- `lifecycle.py` `_get_notes`: `if yes:` short-circuited to a structured error, but
+  fell through to questionary whenever `yes=False` regardless of `json_out`. Fixed
+  to `if yes or json_out:`.
+Added `tests/test_json_non_interactive.py` (4 tests): new.py success path in JSON
+mode, missing-title JSON error, advance-to-gate-without-note JSON error, and an
+exit-code contract test via `CliRunner` (0/1/2 across init/new/show/bad-command).
+Verified manually with literal `echo | spec new ... --json` piping too.
+Files changed: src/spec_cli/commands/new.py, src/spec_cli/commands/lifecycle.py,
+tests/test_json_non_interactive.py (new).

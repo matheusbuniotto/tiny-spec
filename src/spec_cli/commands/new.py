@@ -61,7 +61,9 @@ def cmd_new(
     resolved_tags: list[str] = []
     use_ai = ai
 
-    if not yes:
+    non_interactive = yes or json_out
+
+    if not non_interactive:
         import questionary
 
         style = _prompt_style()
@@ -94,6 +96,8 @@ def cmd_new(
     else:
         if tags:
             resolved_tags = [t.strip() for t in tags.split(",") if t.strip()]
+        if not title:
+            error("Title is required.", json_out, {"error": "title_required"})
 
     resolved_blocked_by = [b.strip().zfill(4) for b in (blocked_by or "").split(",") if b.strip()]
     resolved_parent = parent.strip().zfill(4) if parent and parent.strip() else ""
