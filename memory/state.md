@@ -317,3 +317,21 @@ AGENTS.md standard, worktree workflows). Found bug: `spec new --json` crashes on
 - `backlog.md` — deferred: token saving (minimal schemas, TOON, body-less), action-classified
   gate items, doctor --fix, intent-verbatim wording, `init --ci`, mypy; rejected list (daemon/TUI/etc).
 Files changed: tasks/*.md (new), backlog.md (new).
+
+## Session 11: tasks/001 — `--json` implies non-interactive (bug fix)
+
+Two commands prompted via questionary even in `--json` mode when `--yes` was absent,
+crashing with an EOFError traceback on non-TTY stdin:
+- `new.py`: `if not yes:` gated all prompts, including title. Fixed to
+  `non_interactive = yes or json_out`; when non-interactive and title is missing,
+  errors with `{"error": "title_required"}` instead of silently creating an
+  empty-title spec (this was a latent gap even under `--yes` before the fix).
+- `lifecycle.py` `_get_notes`: `if yes:` short-circuited to a structured error, but
+  fell through to questionary whenever `yes=False` regardless of `json_out`. Fixed
+  to `if yes or json_out:`.
+Added `tests/test_json_non_interactive.py` (4 tests): new.py success path in JSON
+mode, missing-title JSON error, advance-to-gate-without-note JSON error, and an
+exit-code contract test via `CliRunner` (0/1/2 across init/new/show/bad-command).
+Verified manually with literal `echo | spec new ... --json` piping too.
+Files changed: src/spec_cli/commands/new.py, src/spec_cli/commands/lifecycle.py,
+tests/test_json_non_interactive.py (new).

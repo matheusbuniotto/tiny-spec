@@ -52,7 +52,7 @@ def _get_notes(target: SpecStatus, note: Optional[str], yes: bool, json_out: boo
         return note
     if target not in _NOTES_REQUIRED:
         return note or ""
-    if yes:
+    if yes or json_out:
         error(
             f"Notes required to advance to [magenta]{target.value}[/magenta]. Use [cyan]--note[/cyan]",
             json_out,
