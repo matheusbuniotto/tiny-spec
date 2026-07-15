@@ -22,6 +22,7 @@ from .commands.list_cmd import cmd_list
 from .commands.log_cmd import cmd_log
 from .commands.new import cmd_new
 from .commands.next_action import cmd_next
+from .commands.pr_body import cmd_pr_body
 from .commands.review import cmd_review
 from .commands.search import cmd_search
 from .commands.setup_checks import cmd_setup_checks
@@ -291,6 +292,16 @@ def gate_check(
 ) -> None:
     """Show the Human Gate Checklist for a spec."""
     cmd_gate_check(spec_id, json_out, root)
+
+
+@app.command("pr-body", rich_help_panel="Quality")
+def pr_body(
+    spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    json_out: bool = _JSON,
+    root: Path = _ROOT,
+) -> None:
+    """Render Intent/Risk/Evidence PR-body markdown from a spec."""
+    cmd_pr_body(spec_id, json_out, root)
 
 
 @app.command("setup-checks", rich_help_panel="Quality")
