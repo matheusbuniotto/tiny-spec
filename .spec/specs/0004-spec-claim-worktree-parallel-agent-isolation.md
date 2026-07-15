@@ -8,13 +8,13 @@ gate_notes: ''
 id: '0004'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - claim
 - worktree
 template: feature
 title: 'spec claim --worktree: parallel-agent isolation'
-updated_at: '2026-07-15T20:10:03.591103'
+updated_at: '2026-07-15T20:10:03.821836'
 ---
 
 ## User Story
