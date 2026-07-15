@@ -166,8 +166,19 @@ def _worktree_list(root: Path) -> list[dict]:
     return entries
 
 
+def _branch_exists(root: Path, branch: str) -> bool:
+    result = _run(
+        ["git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"], cwd=root, check=False
+    )
+    return result.returncode == 0
+
+
 def git_worktree_add(root: Path, path: Path, branch: str) -> dict:
     """Idempotently create (or reuse) a worktree at `path` on `branch`.
+
+    Reuses the branch (rather than -b) if it already exists, even if not
+    currently checked out anywhere — so a manually `git worktree remove`d
+    branch doesn't turn a re-claim into a "branch already exists" error.
 
     Returns {"created": bool, "error": str | None}.
     """
@@ -176,10 +187,7 @@ def git_worktree_add(root: Path, path: Path, branch: str) -> dict:
         return {"created": False, "error": None}
 
     args = ["git", "worktree", "add", path_str]
-    if any(e.get("branch") == branch for e in _worktree_list(root)):
-        args.append(branch)
-    else:
-        args += ["-b", branch]
+    args += [branch] if _branch_exists(root, branch) else ["-b", branch]
 
     result = _run(args, cwd=root, check=False)
     if result.returncode != 0:

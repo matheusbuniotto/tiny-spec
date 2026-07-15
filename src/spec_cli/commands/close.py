@@ -14,7 +14,7 @@ from rich.panel import Panel
 from ..integrations.git import find_worktree_for_spec
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
 from ..storage import append_log, find_root, find_spec, save_spec
-from ..ui import console, error, not_found
+from ..ui import console, error, not_found, print_worktree_reminder, worktree_reminder_fields
 
 
 def cmd_close(
@@ -88,8 +88,7 @@ def cmd_close(
         if git_sha:
             out["git_commit"] = git_sha
         if worktree_path:
-            out["worktree"] = worktree_path
-            out["worktree_remove_hint"] = f"git worktree remove {worktree_path}"
+            out.update(worktree_reminder_fields(worktree_path))
         typer.echo(json.dumps(out))
         return
 
@@ -108,7 +107,4 @@ def cmd_close(
         )
     )
     if worktree_path:
-        console.print(
-            f"\n  [yellow]⚠ Worktree still exists:[/yellow] {worktree_path}\n"
-            f"  [dim]Remove it:[/dim] [cyan]git worktree remove {worktree_path}[/cyan]\n"
-        )
+        print_worktree_reminder(worktree_path)

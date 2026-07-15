@@ -26,15 +26,26 @@ def _branch_name(spec_id: str, title: str) -> str:
     return f"spec/{spec_id}-{slugify(title)}"
 
 
+_WORKTREE_HINT = "Run your install step in the new worktree — dependencies aren't shared."
+
+
 def _claim_worktree(root: Path, spec) -> dict:
     """Create (or reuse) an isolated worktree for this spec. Returns fields to merge into output."""
     path = _worktree_path(root, spec.id)
     branch = _branch_name(spec.id, spec.title)
     result = git_worktree_add(root, path, branch)
-    out = {"worktree": str(path), "branch": branch}
     if result["error"]:
-        out["worktree_error"] = result["error"]
-    return out
+        return {"worktree_error": result["error"]}
+    return {"worktree": str(path), "branch": branch, "worktree_hint": _WORKTREE_HINT}
+
+
+def _worktree_panel_line(wt_fields: dict) -> str:
+    """Human-output line for a worktree result — success, failure, or nothing (flag unset)."""
+    if wt_fields.get("worktree_error"):
+        return f"\n[red]⚠ Worktree creation failed:[/red] {wt_fields['worktree_error']}"
+    if wt_fields:
+        return f"\n[dim]Worktree:[/dim] {wt_fields['worktree']}\n[dim]{wt_fields['worktree_hint']}[/dim]"
+    return ""
 
 
 def cmd_claim(
@@ -63,7 +74,7 @@ def cmd_claim(
                 )
             )
         else:
-            wt_line = f"\n[dim]Worktree:[/dim] {wt_fields['worktree']}" if wt_fields else ""
+            wt_line = _worktree_panel_line(wt_fields)
             console.print(
                 Panel(
                     f"[bold]{spec.id}[/bold] — {spec.title}\n"
@@ -135,7 +146,7 @@ def cmd_claim(
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
 
-    wt_line = f"\n[dim]Worktree:[/dim] {wt_fields['worktree']}\n" if wt_fields else ""
+    wt_line = _worktree_panel_line(wt_fields)
     console.print(
         Panel(
             f"[bold]{spec.id}[/bold] — {spec.title}\n"

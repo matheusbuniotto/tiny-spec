@@ -89,3 +89,15 @@ def truncate_body(body: str, spec_id: str, limit: int = BODY_TRUNCATE_LIMIT) -> 
     if len(body) <= limit:
         return body
     return f"{body[:limit]}\n\n(truncated, {len(body)} chars — use spec show {spec_id} --json)"
+
+
+def worktree_reminder_fields(path: str) -> dict:
+    """JSON fields for a leftover-worktree reminder on a terminal transition."""
+    return {"worktree": path, "worktree_remove_hint": f"git worktree remove {path}"}
+
+
+def print_worktree_reminder(path: str) -> None:
+    console.print(
+        f"\n  [yellow]⚠ Worktree still exists:[/yellow] {path}\n"
+        f"  [dim]Remove it:[/dim] [cyan]git worktree remove {path}[/cyan]\n"
+    )
