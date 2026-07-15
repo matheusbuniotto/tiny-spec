@@ -8,13 +8,13 @@ gate_notes: ''
 id: '0003'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - validation
 - ci
 template: feature
 title: 'spec doctor: spec-graph validator'
-updated_at: '2026-07-15T17:47:19.005211'
+updated_at: '2026-07-15T17:47:19.208183'
 ---
 
 ## User Story
