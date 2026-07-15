@@ -13,12 +13,13 @@
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
+> Order these as a tracer-bullet sequence: AC1 = thinnest end-to-end slice (something demonstrably working, even if minimal). AC2+ = one increment each, never an unrelated requirement bolted on.
+> Each criterion must still be independently testable and binary (pass/fail).
 > Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
 
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: [Thinnest end-to-end slice — something demonstrably working]
+- [ ] **AC2**: [One increment on top of AC1]
+- [ ] **AC3**: [One more increment — edge case, error path, or added capability]
 
 ## Technical Notes
 

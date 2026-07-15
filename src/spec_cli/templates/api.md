@@ -40,6 +40,8 @@ Obtain : [How to get a token — login endpoint, dashboard, etc.]
 
 ## Endpoints
 
+> Order endpoints as a tracer-bullet sequence: the first endpoint = thinnest end-to-end slice (something demonstrably working, even if minimal). Each subsequent endpoint = one increment each, never an unrelated requirement bolted on.
+
 ### `POST /resource`
 
 **Purpose**: [One sentence]

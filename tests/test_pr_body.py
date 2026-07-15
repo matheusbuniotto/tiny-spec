@@ -36,7 +36,7 @@ def test_pr_body_intent_derives_from_problem_and_solution(tmp_path, monkeypatch)
     spec = find_spec(tmp_path, spec_id)
     spec.body = spec.body.replace(
         "> What specific problem does this solve? Who is affected and how often?\n"
-        "> Bad: \"Users can't find things.\" Good: \"New users abandon onboarding at step 3 because the next action isn't obvious.\"",
+        '> Bad: "Users can\'t find things." Good: "New users abandon onboarding at step 3 because the next action isn\'t obvious."',
         "Users can't tell why their build failed.",
     ).replace(
         "> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?",
@@ -61,7 +61,7 @@ def test_pr_body_risk_derives_from_out_of_scope(tmp_path, monkeypatch):
     spec = find_spec(tmp_path, spec_id)
     spec.body = spec.body.replace(
         "> What are we explicitly NOT doing in this spec? This prevents scope creep.\n"
-        "> Example: \"Pagination is out of scope — we'll add it in spec 0007.\"",
+        '> Example: "Pagination is out of scope — we\'ll add it in spec 0007."',
         "No mobile support in this pass.",
     )
     save_spec(spec, tmp_path)
@@ -81,7 +81,7 @@ def test_pr_body_evidence_lists_ac_checkbox_state(tmp_path, monkeypatch):
 
     spec = find_spec(tmp_path, spec_id)
     spec.body = spec.body.replace(
-        "- [ ] **AC1**: [Observable outcome — not an implementation detail]",
+        "- [ ] **AC1**: [Thinnest end-to-end slice — something demonstrably working]",
         "- [x] **AC1**: Widget renders on load",
     )
     save_spec(spec, tmp_path)
@@ -137,4 +137,6 @@ def test_pr_body_intent_keeps_content_written_as_blockquote(tmp_path, monkeypatc
 
     result = runner.invoke(app, ["pr-body", spec_id])
 
-    assert "As a **user**, I want **fast search** so that **I find things quickly**." in result.stdout
+    assert (
+        "As a **user**, I want **fast search** so that **I find things quickly**." in result.stdout
+    )
