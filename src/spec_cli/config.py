@@ -27,6 +27,7 @@ class Config:
     ai_base_url: str = ""  # for openai provider (Ollama, Groq, etc.)
     default_template: str = "feature"
     git_auto_commit: bool = True  # auto-commit .spec/ on transitions
+    gate: str = "local"  # local | draft | pr — how the human gate is satisfied
 
     # Kata harness — commands that must pass before entering at-gate
     katas: list = field(default_factory=list)  # list of Kata objects
@@ -78,6 +79,7 @@ _KNOWN_FIELDS = {
     "ai_base_url",
     "default_template",
     "git_auto_commit",
+    "gate",
     "katas",
     "checks",
     "project_name",
@@ -121,6 +123,7 @@ def load_config(root: Path) -> Config:
         ai_base_url=data.get("ai_base_url", ""),
         default_template=data.get("default_template", "feature"),
         git_auto_commit=data.get("git_auto_commit", True),
+        gate=data.get("gate", "local"),
         katas=katas,
         project_name=data.get("project_name", ""),
         description=data.get("description", ""),
@@ -135,6 +138,11 @@ def load_config(root: Path) -> Config:
     )
 
 
+def effective_gate(spec, config: Config) -> str:
+    """A spec's own `gate` override wins; otherwise the project default."""
+    return spec.gate or config.gate
+
+
 def save_config(config: Config, root: Path) -> None:
     config_path = root / ".spec" / "config.yaml"
     data: dict = {}
@@ -145,6 +153,7 @@ def save_config(config: Config, root: Path) -> None:
     data["ai_base_url"] = config.ai_base_url
     data["default_template"] = config.default_template
     data["git_auto_commit"] = config.git_auto_commit
+    data["gate"] = config.gate
     if config.katas:
         data["checks"] = [k.to_dict() for k in config.katas]
     # Project context

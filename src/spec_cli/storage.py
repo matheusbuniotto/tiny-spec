@@ -80,6 +80,8 @@ def save_spec(spec: Spec, root: Path) -> Path:
         "blocked_by": spec.blocked_by,
         "parent": spec.parent,
         "template": spec.template,
+        "gate": spec.gate,
+        "pr": spec.pr,
     }
     post = frontmatter.Post(spec.body, **meta)
     path.write_text(frontmatter.dumps(post), encoding="utf-8")

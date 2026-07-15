@@ -47,12 +47,32 @@ def _resolve(spec_id: str, root: Path, json_out: bool):
     return spec
 
 
-def _get_notes(target: SpecStatus, note: Optional[str], yes: bool, json_out: bool) -> str:
+def _get_notes(
+    target: SpecStatus,
+    note: Optional[str],
+    yes: bool,
+    json_out: bool,
+    pr: Optional[str] = None,
+    gate_mode: str = "local",
+) -> str:
     if note and note.strip():
         return note
+    if pr and pr.strip():
+        return note or ""
     if target not in _NOTES_REQUIRED:
         return note or ""
     if yes or json_out:
+        if gate_mode in ("draft", "pr"):
+            error(
+                f"Notes required to advance to [magenta]{target.value}[/magenta]. "
+                f"Use [cyan]--note[/cyan] or [cyan]--pr[/cyan]",
+                json_out,
+                {
+                    "error": "notes_required",
+                    "advancing_to": target.value,
+                    "hint": "Use --note '<what you verified>' or --pr <url|number>",
+                },
+            )
         error(
             f"Notes required to advance to [magenta]{target.value}[/magenta]. Use [cyan]--note[/cyan]",
             json_out,
@@ -90,13 +110,15 @@ def _do_transition(
     root: Path,
     skip_kata: bool = False,
     skip_kata_reason: str = "",
+    pr: Optional[str] = None,
 ) -> None:
-    from ..config import load_config
+    from ..config import effective_gate, load_config
 
     root = find_root(root)
     spec = _resolve(spec_id, root, json_out)
     old_status = spec.status
-    notes = _get_notes(target, note, yes, json_out)
+    gate_mode = effective_gate(spec, load_config(root))
+    notes = _get_notes(target, note, yes, json_out, pr, gate_mode)
 
     if old_status in (SpecStatus.IN_PROGRESS, SpecStatus.APPROVED) and _check_drift(spec, root):
         if not json_out:
@@ -165,7 +187,9 @@ def _do_transition(
 
     cfg = load_config(root)
     try:
-        spec, git_sha = transition(spec, target, root, notes, auto_commit=cfg.git_auto_commit)
+        spec, git_sha = transition(
+            spec, target, root, notes, auto_commit=cfg.git_auto_commit, pr=pr or ""
+        )
     except typer.BadParameter as e:
         error(str(e), json_out, {"error": "invalid_transition", "detail": str(e)})
 
@@ -228,6 +252,7 @@ def cmd_advance(
     root: Path,
     skip_kata: bool = False,
     skip_kata_reason: str = "",
+    pr: Optional[str] = None,
 ) -> None:
     root = find_root(root)
     spec = _resolve(spec_id, root, json_out)
@@ -238,7 +263,9 @@ def cmd_advance(
             json_out,
             {"error": "terminal_state", "status": spec.status.value},
         )
-    _do_transition(spec_id, next_states[0], note, yes, json_out, root, skip_kata, skip_kata_reason)
+    _do_transition(
+        spec_id, next_states[0], note, yes, json_out, root, skip_kata, skip_kata_reason, pr=pr
+    )
 
 
 def cmd_revert(spec_id: str, note: Optional[str], yes: bool, json_out: bool, root: Path) -> None:

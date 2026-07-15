@@ -116,6 +116,9 @@ def advance(
     skip_kata: bool = typer.Option(
         False, "--skip-kata", help="Deprecated alias for --skip-checks", hidden=True
     ),
+    pr: Optional[str] = typer.Option(
+        None, "--pr", help="PR url/number that satisfies the gate (no --note required)"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
@@ -129,6 +132,7 @@ def advance(
         root,
         skip_kata=skip_checks or skip_kata,
         skip_kata_reason=note or "",
+        pr=pr,
     )
 
 

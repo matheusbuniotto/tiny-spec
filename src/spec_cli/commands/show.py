@@ -10,6 +10,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
 
+from ..config import effective_gate, load_config
 from ..models import STATUS_STYLE, TRANSITION_LABELS, TRANSITIONS, SpecStatus
 from ..storage import children_of, find_root, find_spec, list_specs, open_blockers
 from ..ui import console, error
@@ -61,6 +62,7 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
 
     if json_out:
         out = spec.to_dict(include_body=True)
+        out["gate_mode"] = effective_gate(spec, load_config(root))
         if spec.template == "map":
             out["children"] = [
                 c.to_dict(include_body=False) for c in children_of(spec.id, all_specs)
