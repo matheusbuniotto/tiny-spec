@@ -3,16 +3,18 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:50.870169'
+gate: ''
 gate_notes: ''
 id: '0001'
 parent: ''
-status: draft
+pr: ''
+status: approved
 tags:
 - ergonomics
 - json
 template: feature
 title: 'Agent output ergonomics: help[], counts, truncation'
-updated_at: '2026-07-15T11:16:50.870347'
+updated_at: '2026-07-15T17:12:45.502158'
 ---
 
 ## User Story
