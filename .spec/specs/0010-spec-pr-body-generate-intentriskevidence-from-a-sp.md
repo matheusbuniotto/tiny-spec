@@ -4,17 +4,24 @@ author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T14:59:46.469648'
 gate: ''
-gate_notes: ''
+gate_notes: 'Implemented via TDD: spec pr-body <id> [--json] renders Intent (User
+  Story + Problem Statement + Proposed Solution), Risk (Out of Scope, with graceful
+  fallback when absent), Evidence (AC checkbox state + gate_notes). Fixed a real bug
+  found via manual verification against spec 0008: the blockquote-line filter meant
+  to skip unfilled template guidance was also stripping real filled content, since
+  specs here write User Story/Problem Statement as blockquotes by convention — fixed
+  and regression-tested. 7/7 new tests pass, full suite 34/36 (2 pre-existing unrelated
+  failures).'
 id: '0010'
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - gate
 - pr-review
 template: feature
 title: 'spec pr-body: generate Intent/Risk/Evidence from a spec'
-updated_at: '2026-07-15T15:19:11.910612'
+updated_at: '2026-07-15T15:24:29.897830'
 ---
 
 ## User Story
