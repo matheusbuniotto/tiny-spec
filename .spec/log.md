@@ -18,3 +18,4 @@ Append-only record of spec events.
 - **2026-07-15 14:59 UTC** — `0011` **Tracer-bullet AC: ordered vertical slices in feature/api templates** created (template: feature)
 - **2026-07-15 15:10 UTC** — `0008` **Gate modes: local, draft, pr** → `approved`
 - **2026-07-15 15:10 UTC** — `0008` **Gate modes: local, draft, pr** → `in-progress`
+- **2026-07-15 15:10 UTC** — 🔵 GATE OPENED `0008` **Gate modes: local, draft, pr** — Implemented via TDD: Config.gate (default local, read+write), Spec.gate/pr frontmatter fields, effective_gate() helper, --pr flag on spec advance (satisfies notes-required, records pr distinctly), gate_mode surfaced in spec show/gate-check --json. 9/9 new tests pass (tests/test_gate_modes.py). Full suite 27/29 — 2 pre-existing failures in test_verify_checks_rename.py confirmed unrelated via git stash. AC1-AC4 all covered by tests.

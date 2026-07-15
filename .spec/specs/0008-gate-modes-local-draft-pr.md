@@ -4,17 +4,22 @@ author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T14:59:46.170962'
 gate: ''
-gate_notes: ''
+gate_notes: 'Implemented via TDD: Config.gate (default local, read+write), Spec.gate/pr
+  frontmatter fields, effective_gate() helper, --pr flag on spec advance (satisfies
+  notes-required, records pr distinctly), gate_mode surfaced in spec show/gate-check
+  --json. 9/9 new tests pass (tests/test_gate_modes.py). Full suite 27/29 — 2 pre-existing
+  failures in test_verify_checks_rename.py confirmed unrelated via git stash. AC1-AC4
+  all covered by tests.'
 id: 0008
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - gate
 - pr-review
 template: feature
 title: 'Gate modes: local, draft, pr'
-updated_at: '2026-07-15T15:10:24.799236'
+updated_at: '2026-07-15T15:10:33.841447'
 ---
 
 ## User Story
