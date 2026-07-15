@@ -16,3 +16,4 @@ Append-only record of spec events.
 - **2026-07-15 14:59 UTC** — `0009` **no-mistakes integration as pluggable gate engine** created (template: feature)
 - **2026-07-15 14:59 UTC** — `0010` **spec pr-body: generate Intent/Risk/Evidence from a spec** created (template: feature)
 - **2026-07-15 14:59 UTC** — `0011` **Tracer-bullet AC: ordered vertical slices in feature/api templates** created (template: feature)
+- **2026-07-15 15:10 UTC** — `0008` **Gate modes: local, draft, pr** → `approved`
