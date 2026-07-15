@@ -15,7 +15,7 @@ from rich.table import Table
 
 from ..config import Kata, load_config
 from ..storage import find_root, find_spec
-from ..ui import console, error
+from ..ui import console, not_found
 
 
 def run_kata(kata: Kata, root: Path) -> dict:
@@ -139,7 +139,7 @@ def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
     if spec_id:
         spec = find_spec(root, spec_id)
         if not spec:
-            error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
+            not_found(spec_id, json_out)
 
     if not cfg.katas:
         if json_out:

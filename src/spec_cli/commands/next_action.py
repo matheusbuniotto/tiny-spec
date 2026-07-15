@@ -12,7 +12,7 @@ from rich.panel import Panel
 
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
 from ..storage import find_root, list_specs, open_blockers
-from ..ui import console
+from ..ui import console, with_help
 
 _PRIORITY = {
     SpecStatus.AT_GATE: 0,
@@ -48,7 +48,12 @@ def cmd_next(json_out: bool, root: Path) -> None:
     if not active:
         if json_out:
             typer.echo(
-                json.dumps({"action": "none", "message": "All specs implemented or none exist."})
+                json.dumps(
+                    with_help(
+                        {"action": "none", "message": "All specs implemented or none exist."},
+                        'spec new "<title>" --template feature --yes --json',
+                    )
+                )
             )
         else:
             console.print("[dim]Nothing to do — all specs are implemented or none exist.[/dim]")
@@ -84,17 +89,20 @@ def cmd_next(json_out: bool, root: Path) -> None:
         ]
         typer.echo(
             json.dumps(
-                {
-                    "id": top.id,
-                    "title": top.title,
-                    "status": top.status.value,
-                    "assignee": top.assignee,
-                    "action": action,
-                    "command": cmd,
-                    "age_days": days,
-                    "blocked_by": [b.id for b in blockers],
-                    "claimable_queue": queue,
-                }
+                with_help(
+                    {
+                        "id": top.id,
+                        "title": top.title,
+                        "status": top.status.value,
+                        "assignee": top.assignee,
+                        "action": action,
+                        "command": cmd,
+                        "age_days": days,
+                        "blocked_by": [b.id for b in blockers],
+                        "claimable_queue": queue,
+                    },
+                    cmd,
+                )
             )
         )
         return
