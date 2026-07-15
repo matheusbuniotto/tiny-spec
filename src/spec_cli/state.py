@@ -6,8 +6,8 @@ from typing import Optional
 
 import typer
 
-from .models import Spec, SpecStatus, TRANSITIONS
-from .storage import save_spec, append_log
+from .models import TRANSITIONS, Spec, SpecStatus
+from .storage import append_log, save_spec
 
 
 def transition(
@@ -16,6 +16,7 @@ def transition(
     root: Path,
     notes: str = "",
     auto_commit: bool = True,
+    pr: str = "",
 ) -> tuple[Spec, Optional[str]]:
     """Transition a spec. Returns (spec, git_sha_or_None)."""
     if not spec.can_transition_to(new_status):
@@ -35,18 +36,25 @@ def transition(
         else:
             spec.gate_notes = notes
 
+    if pr:
+        spec.pr = pr
+
     save_spec(spec, root)
 
+    suffix = notes
+    if pr:
+        suffix = f"{notes} (PR #{pr})".strip() if notes else f"PR #{pr}"
+
     if new_status == SpecStatus.AT_GATE:
-        log_entry = f"🔵 GATE OPENED `{spec.id}` **{spec.title}** — {notes}"
+        log_entry = f"🔵 GATE OPENED `{spec.id}` **{spec.title}** — {suffix}"
     elif new_status == SpecStatus.IMPLEMENTED:
-        log_entry = f"✅ GATE PASSED `{spec.id}` **{spec.title}** — {notes}"
+        log_entry = f"✅ GATE PASSED `{spec.id}` **{spec.title}** — {suffix}"
     elif new_status == SpecStatus.DRAFT and notes:
-        log_entry = f"↩ REVERTED `{spec.id}` **{spec.title}** — {notes}"
+        log_entry = f"↩ REVERTED `{spec.id}` **{spec.title}** — {suffix}"
     else:
         log_entry = f"`{spec.id}` **{spec.title}** → `{new_status.value}`"
-        if notes:
-            log_entry += f" — {notes}"
+        if suffix:
+            log_entry += f" — {suffix}"
 
     append_log(root, log_entry)
 
@@ -54,9 +62,13 @@ def transition(
     if auto_commit:
         try:
             from .integrations.git import auto_commit_transition
+
             git_sha = auto_commit_transition(
-                root, spec.id, spec.title,
-                old_status.value, new_status.value,
+                root,
+                spec.id,
+                spec.title,
+                old_status.value,
+                new_status.value,
             )
         except Exception:
             pass

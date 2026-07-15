@@ -61,6 +61,8 @@ class Spec(BaseModel):
     blocked_by: list[str] = Field(default_factory=list)
     parent: str = ""
     template: str = "feature"
+    gate: str = ""  # local | draft | pr — overrides project default when set
+    pr: str = ""  # PR url/number the human gate was satisfied via, if any
     body: str = ""
     file_path: Optional[str] = None
 
@@ -91,6 +93,8 @@ class Spec(BaseModel):
             "blocked_by": self.blocked_by,
             "parent": self.parent,
             "template": self.template,
+            "gate": self.gate,
+            "pr": self.pr,
             "file_path": self.file_path,
         }
         if include_body:
