@@ -1,8 +1,42 @@
 # tiny-spec — State File
 
-## Last updated: 2026-04-10 (session 3)
+## Last updated: 2026-07-14 (session 8)
 
 ## Recent changes
+
+### Session 8: Spec dependencies (`blocked_by`) + Maps (`parent`)
+
+**Problem**: tiny-spec calls itself "spec-driven + implementation breakdown" but had no way to express that spec B can't start until spec A is done — specs were an unordered set. This is the highest-leverage gap identified while mapping the tool against Matt Pocock's `wayfinder`/`domain-modeling` skills (github.com/mattpocock/skills): his tooling separates decisions with explicit blocking edges; tiny-spec had none.
+
+**`blocked_by` field** — new spec frontmatter, `list[str]` of spec IDs:
+- Set at creation: `spec new "Title" --blocked-by 0001,0002`
+- Enforced at the one point that matters — starting work: `spec claim` and `spec advance` (→ `in-progress`) both reject the transition with `{"error": "blocked", "blocked_by": [...]}` while any listed spec isn't `implemented`/`closed`. No override flag — clear the block by finishing the blocker or hand-editing `blocked_by` via `spec edit`.
+- `spec next` and `spec list --claimable` skip blocked specs when picking/queuing work; `spec next` reports `blocked_by` in its JSON and points at the blocker when the top spec is blocked.
+- `spec list --blocked` — new filter, shows what's stuck.
+- `spec show` renders a "Blocked by" line; `spec dashboard` shows a ⛔ badge on blocked cards.
+
+**Also fixed**: `src/spec_cli/SKILL.md` had drifted from `skill.md` (missing `claim`, `setup-checks`, and the agent pickup workflow sections) despite session 7 notes claiming they were synced. Resynced by copying `skill.md` over it — keep doing that after any `skill.md` edit until this is scripted.
+
+**`map` template + `parent` field** — wayfinder-lite, second bet from the same gap analysis: tiny-spec had no way to represent "this idea is too big/foggy for one spec." Rather than a new subsystem (tracker, decision-map issue type, etc.), it's just one more template plus one more link field, reusing the existing lifecycle/storage/dashboard machinery entirely:
+- `spec new "<title>" --template map` — a spec whose body has Destination / Decisions So Far / Not Yet Specified / Child Specs sections (`templates/map.md`)
+- `spec new "<title>" --parent <map_id>` — links a normal spec to a map. `parent` is informational only — it does not gate anything (unlike `blocked_by`), matching Pocock's "the map is an index, not a store."
+- `spec show <map_id>` renders a live child roster computed from `parent` links (new `children_of()` helper), so the roster can't drift from reality the way a hand-maintained checklist would.
+- `spec list --parent <map_id>` — lists a map's children directly.
+- The map spec goes through the same draft→...→implemented lifecycle as everything else; "implemented" for a map means the fog is gone and every child resolved.
+
+**Files changed (session 8):**
+- `src/spec_cli/models.py` — `blocked_by`, `parent` fields, `to_dict`
+- `src/spec_cli/storage.py` — persist/parse both fields, `open_blockers()`, `children_of()` helpers
+- `src/spec_cli/commands/lifecycle.py` — dependency gate before `in-progress`
+- `src/spec_cli/commands/claim.py` — same gate
+- `src/spec_cli/commands/next_action.py` — skip blocked specs, report `blocked_by`
+- `src/spec_cli/commands/list_cmd.py` — `--blocked`, `--parent` filters; `--claimable` now excludes blocked
+- `src/spec_cli/commands/show.py` — "Blocked by" / "Part of map" lines, live child roster for maps
+- `src/spec_cli/commands/dashboard.py` — ⛔ badge
+- `src/spec_cli/commands/new.py`, `main.py` — `--blocked-by`, `--parent` options; `map` in `AVAILABLE_TEMPLATES`
+- `src/spec_cli/templates/map.md` — NEW
+- `tests/test_storage.py` — NEW: `open_blockers()`, `children_of()` unit tests
+- `README.md`, `skill.md`, `src/spec_cli/SKILL.md` — documented
 
 ### Session 7: SKILL.md + Agent Overhaul
 

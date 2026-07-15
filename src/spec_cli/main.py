@@ -5,33 +5,33 @@ from typing import Optional
 
 import typer
 
-from .commands.init import cmd_init
-from .commands.greenfield import cmd_greenfield, PROJECT_TYPES
-from .commands.new import cmd_new
-from .commands.list_cmd import cmd_list
-from .commands.show import cmd_show
-from .commands.lifecycle import cmd_advance, cmd_revert
-from .commands.dashboard import cmd_dashboard
-from .commands.config_cmd import cmd_config_show
-from .commands.gate_check import cmd_gate_check
-from .commands.git_sync import cmd_sync, cmd_git_context
 from .commands.assign import cmd_assign
+from .commands.claim import cmd_claim
 from .commands.close import cmd_close
+from .commands.config_cmd import cmd_config_show
+from .commands.dashboard import cmd_dashboard
 from .commands.edit import cmd_edit
 from .commands.export import cmd_export
+from .commands.gate_check import cmd_gate_check
+from .commands.git_sync import cmd_git_context, cmd_sync
+from .commands.greenfield import PROJECT_TYPES, cmd_greenfield
+from .commands.init import cmd_init
 from .commands.kata import cmd_run_kata
+from .commands.lifecycle import cmd_advance, cmd_revert
+from .commands.list_cmd import cmd_list
 from .commands.log_cmd import cmd_log
+from .commands.new import cmd_new
 from .commands.next_action import cmd_next
-from .commands.claim import cmd_claim
 from .commands.review import cmd_review
 from .commands.search import cmd_search
-from .commands.stats import cmd_stats
 from .commands.setup_checks import cmd_setup_checks
+from .commands.show import cmd_show
+from .commands.stats import cmd_stats
 
 app = typer.Typer(
     name="spec",
     help="[bold cyan]tiny-spec[/bold cyan] — spec-driven development CLI\n\n"
-         "Human and AI friendly. All commands support [cyan]--json[/cyan] and [cyan]--yes[/cyan].",
+    "Human and AI friendly. All commands support [cyan]--json[/cyan] and [cyan]--yes[/cyan].",
     no_args_is_help=False,
     invoke_without_command=True,
     rich_markup_mode="rich",
@@ -39,7 +39,7 @@ app = typer.Typer(
 
 _ROOT = typer.Option(Path("."), "--root", "-r", help="Project root", hidden=True)
 _JSON = typer.Option(False, "--json", help="JSON output")
-_YES  = typer.Option(False, "--yes", "-y", help="Skip prompts")
+_YES = typer.Option(False, "--yes", "-y", help="Skip prompts")
 
 
 @app.callback(invoke_without_command=True)
@@ -54,12 +54,19 @@ def _default(
 
 # ── Lifecycle ────────────────────────────────────────────────
 
+
 @app.command(rich_help_panel="Lifecycle")
 def init(
-    folder: Optional[str] = typer.Argument(None, help="Folder name (greenfield). Omit to init current dir."),
-    project_type: str = typer.Option("blank", "--type", "-t", help="blank, python-api, typescript-web, cli-tool"),
+    folder: Optional[str] = typer.Argument(
+        None, help="Folder name (greenfield). Omit to init current dir."
+    ),
+    project_type: str = typer.Option(
+        "blank", "--type", "-t", help="blank, python-api, typescript-web, cli-tool"
+    ),
     author: str = typer.Option("", "--author", "-a"),
-    spec_only: bool = typer.Option(False, "--spec-only", help="Only .spec/, skip agents + CLAUDE.md"),
+    spec_only: bool = typer.Option(
+        False, "--spec-only", help="Only .spec/, skip agents + CLAUDE.md"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
@@ -74,29 +81,46 @@ def init(
 @app.command(rich_help_panel="Lifecycle")
 def new(
     title: str = typer.Argument("", help="Spec title"),
-    template: Optional[str] = typer.Option(None, "--template", "-t", help="feature | bug | adr | api"),
+    template: Optional[str] = typer.Option(
+        None,
+        "--template",
+        "-t",
+        help="feature | bug | adr | api | data-pipeline | experiment | map",
+    ),
     author: Optional[str] = typer.Option(None, "--author", "-a"),
     tags: Optional[str] = typer.Option(None, "--tags", help="Comma-separated"),
+    blocked_by: Optional[str] = typer.Option(
+        None, "--blocked-by", help="Comma-separated spec IDs this depends on"
+    ),
+    parent: Optional[str] = typer.Option(
+        None, "--parent", help="ID of the map spec this belongs to"
+    ),
     ai: bool = typer.Option(False, "--ai", help="Draft with AI"),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Create a new spec."""
-    cmd_new(title, template, author, tags, yes, json_out, ai, root)
+    cmd_new(
+        title, template, author, tags, yes, json_out, ai, root, blocked_by=blocked_by, parent=parent
+    )
 
 
 @app.command(rich_help_panel="Lifecycle")
 def advance(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
     note: Optional[str] = typer.Option(None, "--note", "-n", help="Required at gate transitions"),
-    skip_kata: bool = typer.Option(False, "--skip-kata", help="Skip kata checks (requires --note explaining why)"),
+    skip_kata: bool = typer.Option(
+        False, "--skip-kata", help="Skip kata checks (requires --note explaining why)"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Advance to next state: draft → approved → in-progress → at-gate → implemented"""
-    cmd_advance(spec_id, note, yes, json_out, root, skip_kata=skip_kata, skip_kata_reason=note or "")
+    cmd_advance(
+        spec_id, note, yes, json_out, root, skip_kata=skip_kata, skip_kata_reason=note or ""
+    )
 
 
 @app.command(rich_help_panel="Lifecycle")
@@ -114,7 +138,9 @@ def revert(
 @app.command(rich_help_panel="Lifecycle")
 def close(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
-    reason: str = typer.Option(..., "--reason", help="descoped | wont-fix | superseded | duplicate"),
+    reason: str = typer.Option(
+        ..., "--reason", help="descoped | wont-fix | superseded | duplicate"
+    ),
     note: Optional[str] = typer.Option(None, "--note", "-n", help="Explain why"),
     yes: bool = _YES,
     json_out: bool = _JSON,
@@ -149,6 +175,7 @@ def assign(
 
 # ── View ─────────────────────────────────────────────────────
 
+
 @app.command("list", rich_help_panel="View")
 def list_specs(
     status: Optional[str] = typer.Option(None, "--status", "-s", help="Filter by status"),
@@ -156,11 +183,17 @@ def list_specs(
     full: bool = typer.Option(False, "--full", help="Include spec body in JSON output"),
     assignee: Optional[str] = typer.Option(None, "--assignee", "-a", help="Filter by assignee"),
     claimable: bool = typer.Option(False, "--claimable", help="Only show unclaimed approved specs"),
+    blocked: bool = typer.Option(
+        False, "--blocked", help="Only show specs waiting on an open blocker"
+    ),
+    parent: Optional[str] = typer.Option(
+        None, "--parent", help="Only show children of this map spec"
+    ),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """List all specs."""
-    cmd_list(status, stale, json_out, root, full, assignee, claimable)
+    cmd_list(status, stale, json_out, root, full, assignee, claimable, blocked, parent)
 
 
 @app.command(rich_help_panel="View")
@@ -226,6 +259,7 @@ def log(
 
 # ── Quality ──────────────────────────────────────────────────
 
+
 @app.command(rich_help_panel="Quality")
 def review(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
@@ -267,6 +301,7 @@ def run_kata(
 
 
 # ── Setup ────────────────────────────────────────────────────
+
 
 @app.command(rich_help_panel="Setup")
 def edit(

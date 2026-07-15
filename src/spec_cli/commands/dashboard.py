@@ -4,14 +4,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from rich import box
 from rich.columns import Columns
 from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
-from rich import box
 
-from ..models import Spec, SpecStatus, STATUS_STYLE
-from ..storage import list_specs, find_root
+from ..models import STATUS_STYLE, Spec, SpecStatus
+from ..storage import find_root, list_specs, open_blockers
 from ..ui import console
 
 STALE_DAYS = 3
@@ -38,11 +38,20 @@ def _pipeline(specs) -> Columns:
         lines = []
         for s in matching:
             badge = _age_badge(s)
-            lines.append(f"[bold]{s.id}[/bold] {s.title[:26]}{badge}")
+            lock = " [red]⛔[/red]" if open_blockers(s, specs) else ""
+            lines.append(f"[bold]{s.id}[/bold] {s.title[:26]}{badge}{lock}")
         body = "\n".join(lines) or "[dim](none)[/dim]"
         count_label = f" ({len(matching)})" if matching else ""
-        panels.append(Panel(body, title=f"[{color}]{icon} {status.value}{count_label}[/{color}]",
-                           border_style=color, box=box.ROUNDED, expand=True, padding=(0, 1)))
+        panels.append(
+            Panel(
+                body,
+                title=f"[{color}]{icon} {status.value}{count_label}[/{color}]",
+                border_style=color,
+                box=box.ROUNDED,
+                expand=True,
+                padding=(0, 1),
+            )
+        )
     return Columns(panels, equal=True, expand=True)
 
 
@@ -52,9 +61,17 @@ def _summary(specs) -> Panel:
         icon, color = STATUS_STYLE[status]
         count = sum(1 for s in specs if s.status == status)
         bar = "█" * count + "░" * max(0, 10 - count)
-        rows.append(f"[{color}]{icon} {status.value:<13}[/{color}] [{color}]{bar}[/{color}] [bold]{count}[/bold]")
+        rows.append(
+            f"[{color}]{icon} {status.value:<13}[/{color}] [{color}]{bar}[/{color}] [bold]{count}[/bold]"
+        )
     rows += ["", f"[dim]Total[/dim]  [bold]{len(specs)}[/bold]"]
-    return Panel("\n".join(rows), title="[bold]Summary[/bold]", box=box.ROUNDED, border_style="dim", padding=(0, 1))
+    return Panel(
+        "\n".join(rows),
+        title="[bold]Summary[/bold]",
+        box=box.ROUNDED,
+        border_style="dim",
+        padding=(0, 1),
+    )
 
 
 def _alerts(specs) -> str:
@@ -62,13 +79,21 @@ def _alerts(specs) -> str:
     at_gate = [s for s in specs if s.status == SpecStatus.AT_GATE]
     if at_gate:
         ids = ", ".join(f"[bold]{s.id}[/bold]" for s in at_gate)
-        lines.append(f"[magenta]⏸ {len(at_gate)} spec{'s' if len(at_gate) != 1 else ''} waiting at gate:[/magenta] {ids}")
+        lines.append(
+            f"[magenta]⏸ {len(at_gate)} spec{'s' if len(at_gate) != 1 else ''} waiting at gate:[/magenta] {ids}"
+        )
 
-    stale = [s for s in specs
-             if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED) and _age_days(s.updated_at) >= STALE_DAYS]
+    stale = [
+        s
+        for s in specs
+        if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)
+        and _age_days(s.updated_at) >= STALE_DAYS
+    ]
     if stale:
         ids = ", ".join(f"[bold]{s.id}[/bold] ({_age_days(s.updated_at)}d)" for s in stale)
-        lines.append(f"[red]⚠ {len(stale)} stale spec{'s' if len(stale) != 1 else ''} (>{STALE_DAYS}d):[/red] {ids}")
+        lines.append(
+            f"[red]⚠ {len(stale)} stale spec{'s' if len(stale) != 1 else ''} (>{STALE_DAYS}d):[/red] {ids}"
+        )
 
     return "\n".join(lines)
 
@@ -77,10 +102,14 @@ def _layout(specs, live: bool = False) -> Table:
     outer = Table.grid(expand=True)
     outer.add_column()
     subtitle = "  [dim]Ctrl+C to exit[/dim]" if live else ""
-    outer.add_row(Panel(
-        f"[bold cyan]◈ tiny-spec dashboard[/bold cyan]{subtitle}",
-        box=box.ROUNDED, border_style="bright_blue", padding=(0, 1),
-    ))
+    outer.add_row(
+        Panel(
+            f"[bold cyan]◈ tiny-spec dashboard[/bold cyan]{subtitle}",
+            box=box.ROUNDED,
+            border_style="bright_blue",
+            padding=(0, 1),
+        )
+    )
 
     alerts = _alerts(specs)
     if alerts:

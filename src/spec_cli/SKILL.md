@@ -37,6 +37,9 @@ spec new "Title" --template adr --yes --json
 spec new "Title" --template api --yes --json
 spec new "Title" --template data-pipeline --yes --json
 spec new "Title" --template experiment --yes --json
+spec new "Title" --template map --yes --json          # idea too big/foggy for one spec
+spec new "Title" --blocked-by 0001,0002 --yes --json  # depends on other specs (blocks claim/advance)
+spec new "Title" --parent 0001 --yes --json           # links this spec to a map (informational, non-blocking)
 
 # Read
 spec list --json
@@ -46,7 +49,9 @@ spec list --status at-gate --json
 spec list --full --json                              # includes spec bodies
 spec list --assignee "alice" --json                 # filter by owner
 spec list --stale --json                            # stuck 3+ days
-spec show <id> --json
+spec list --blocked --json                          # waiting on an open blocker
+spec list --parent <map_id> --json                  # a map's child specs
+spec show <id> --json                               # for a map, also renders live child roster
 
 # Advance
 spec advance <id> --yes --json                      # auto-detects next state
@@ -64,6 +69,10 @@ spec close <id> --reason duplicate --note "same as <id>" --yes --json
 spec assign <id> "alice" --json
 spec assign <id> "claude-implementer" --json
 spec assign <id> "" --json                          # unassign
+
+# Claim (agent atomic pickup)
+spec claim <id> --yes --json                        # assert approved → assign → in-progress
+spec claim <id> --as "my-agent" --yes --json        # specify agent name (default: $SPEC_AGENT or "agent")
 ```
 
 ### Discovery & search
@@ -72,7 +81,9 @@ spec assign <id> "" --json                          # unassign
 spec search "payment retry" --json
 spec search "schema migration" --status in-progress --json
 spec stats --json                                   # pipeline health object
-spec next --json                                    # top priority action
+spec next --json                                    # top priority action (includes assignee + claimable_queue + blocked_by)
+spec list --claimable --json                        # only unclaimed approved specs — ready to pick up
+spec list --blocked --json                          # specs waiting on an open blocker
 spec log --last 20 --json
 spec log --spec <id> --json                         # history for one spec
 spec log --query "gate" --json
@@ -81,6 +92,7 @@ spec log --query "gate" --json
 ### Quality & gates
 
 ```bash
+spec setup-checks --yes --json  # scan project, auto-configure pre-gate checks
 spec review <id> --json         # AI pre-flight: APPROVE / NEEDS WORK / REJECT
 spec gate-check <id> --json     # show Human Gate Checklist
 spec run-kata --json            # run all katas, exit 1 on failure
@@ -118,6 +130,7 @@ draft → approved → in-progress → at-gate → implemented
 
 - `at-gate → implemented` always requires a human. Never pass this yourself without explicit confirmation.
 - Katas (if configured) block `in-progress → at-gate` automatically.
+- `blocked_by` (if set) blocks `approved → in-progress` automatically — a spec can't be claimed or started while any spec in its `blocked_by` list isn't `implemented`/`closed` yet. Set it with `spec new --blocked-by <id,id>`. `spec next` and `spec list --claimable` already skip blocked specs; use `spec list --blocked` to see what's stuck and why.
 
 ---
 
@@ -130,6 +143,37 @@ spec show <id> --json                                       # 3. read it back
 spec review <id> --json                                     # 4. pre-flight check
 # if verdict is APPROVE or NEEDS WORK with minor issues, show user and ask
 spec advance <id> --yes --json                             # 5. draft → approved (after user OK)
+```
+
+## Workflow: "this idea is too big/foggy to spec directly"
+
+If you can't yet write a scoped, testable spec — the destination is clear-ish but the shape of the work isn't — don't force it into one spec. Chart a map instead:
+
+```bash
+spec new "<destination>" --template map --yes --json         # 1. create the map (id: e.g. 0001)
+# fill in Destination + Not Yet Specified sections — the open questions
+spec advance 0001 --yes --json                                # 2. draft → approved once scoped enough to spawn children
+spec new "<title>" --template feature --parent 0001 --yes --json  # 3. one spec per decided/scoped piece
+spec new "<title>" --template feature --parent 0001 --yes --json
+spec show 0001 --json                                          # 4. renders live child roster — don't hand-maintain it
+# work the children through the normal lifecycle independently
+# the map itself reaches implemented once every child is implemented/closed and nothing is left in "Not Yet Specified"
+```
+
+`parent` only links — it doesn't block anything. Use `--blocked-by` on a child if its work genuinely can't start before another spec finishes.
+
+## Workflow: agent picks up and delivers work
+
+```bash
+spec next --json                                             # 1. find top action (check assignee + claimable_queue)
+spec list --claimable --json                                 # (optional) browse all unclaimed approved specs
+spec claim <id> --yes --json                                 # 2. atomic claim: assert approved, assign, start
+# ... implement the work ...
+spec run-kata --json                                         # 3. katas must pass before gating
+spec advance <id> --note "<delivery summary>" --yes --json  # 4. DELIVERY SIGNAL: in-progress → at-gate
+# The --note is the delivery receipt the human will read. Be specific:
+# "Implemented X. Tests: 12 pass. Edge case Y handled in file.py:42."
+# DO NOT advance past at-gate — that gate belongs to the human.
 ```
 
 ## Workflow: "what's in flight / what should I do next?"
@@ -169,6 +213,14 @@ spec assign <id> "<name or agent>" --json
 spec list --assignee "<name>" --json   # what are they working on?
 ```
 
+## Workflow: "set up pre-gate checks for this project"
+
+```bash
+spec setup-checks --yes --json         # scans for pytest/ruff/mypy/eslint/tsc/cargo/go etc.
+# writes detected checks to .spec/config.yaml
+# these auto-run before any spec can enter at-gate
+```
+
 ## Workflow: "run the checks before gating"
 
 ```bash
@@ -196,6 +248,8 @@ spec next --json
 ---
 
 ## Gate rule (non-negotiable)
+
+`spec advance <id> --note "..."` moving a spec from `in-progress` to `at-gate` is the **agent delivery signal**. The `--note` is the delivery receipt the human will read — be specific about what was done, what tests passed, and any edge cases handled.
 
 `at-gate → implemented` requires a human.
 

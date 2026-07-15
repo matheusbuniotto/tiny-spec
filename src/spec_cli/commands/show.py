@@ -5,22 +5,22 @@ from datetime import datetime
 from pathlib import Path
 
 import typer
+from rich import box
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
-from rich import box
 
-from ..models import SpecStatus, STATUS_STYLE, TRANSITIONS, TRANSITION_LABELS
-from ..storage import find_spec, find_root
+from ..models import STATUS_STYLE, TRANSITION_LABELS, TRANSITIONS, SpecStatus
+from ..storage import children_of, find_root, find_spec, list_specs, open_blockers
 from ..ui import console, error
 
 _STAGE_ORDER = list(SpecStatus)
 
 _NEXT_ACTIONS: dict[SpecStatus, str] = {
-    SpecStatus.DRAFT:       "Review and approve → [cyan]spec advance {id}[/cyan]",
-    SpecStatus.APPROVED:    "Start implementation → [cyan]spec advance {id}[/cyan]",
-    SpecStatus.IN_PROGRESS: "Finish and gate → [cyan]spec advance {id} --note \"...\"[/cyan]",
-    SpecStatus.AT_GATE:     "Verify the gate checklist → [cyan]spec gate-check {id}[/cyan] then [cyan]spec advance {id} --note \"...\"[/cyan]",
+    SpecStatus.DRAFT: "Review and approve → [cyan]spec advance {id}[/cyan]",
+    SpecStatus.APPROVED: "Start implementation → [cyan]spec advance {id}[/cyan]",
+    SpecStatus.IN_PROGRESS: 'Finish and gate → [cyan]spec advance {id} --note "..."[/cyan]',
+    SpecStatus.AT_GATE: 'Verify the gate checklist → [cyan]spec gate-check {id}[/cyan] then [cyan]spec advance {id} --note "..."[/cyan]',
     SpecStatus.IMPLEMENTED: "[dim]Done — no further action[/dim]",
 }
 
@@ -57,12 +57,21 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
     if not spec:
         error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
 
+    all_specs = list_specs(root)
+
     if json_out:
-        typer.echo(json.dumps(spec.to_dict(include_body=True)))
+        out = spec.to_dict(include_body=True)
+        if spec.template == "map":
+            out["children"] = [
+                c.to_dict(include_body=False) for c in children_of(spec.id, all_specs)
+            ]
+        typer.echo(json.dumps(out))
         return
 
     icon, color = STATUS_STYLE[spec.status]
-    tags_str = "  ".join(f"[dim]#{t}[/dim]" for t in spec.tags) if spec.tags else "[dim](none)[/dim]"
+    tags_str = (
+        "  ".join(f"[dim]#{t}[/dim]" for t in spec.tags) if spec.tags else "[dim](none)[/dim]"
+    )
 
     progress = _progress_bar(spec.status)
     next_action = _NEXT_ACTIONS[spec.status].format(id=spec.id)
@@ -79,16 +88,49 @@ def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) ->
         f"{progress}\n\n"
         f"[dim]Next →[/dim] {next_action}"
     )
+    if spec.blocked_by:
+        blockers = open_blockers(spec, all_specs)
+        if blockers:
+            ids = ", ".join(f"[red]{b.id}[/red]" for b in blockers)
+            meta += f"\n\n[dim]Blocked by:[/dim] {ids}"
+        else:
+            meta += (
+                f"\n\n[dim]Blocked by:[/dim] {', '.join(spec.blocked_by)} [dim](all resolved)[/dim]"
+            )
+    if spec.parent:
+        map_spec = find_spec(root, spec.parent)
+        map_label = f"{spec.parent} — {map_spec.title}" if map_spec else spec.parent
+        meta += f"\n\n[dim]Part of map:[/dim] [cyan]{map_label}[/cyan]"
     if spec.gate_notes:
         meta += f"\n\n[dim]Gate notes:[/dim]\n[dim]{spec.gate_notes}[/dim]"
 
-    console.print(Panel(meta, title=f"[bold]{spec.title}[/bold]", box=box.ROUNDED, border_style=color))
+    console.print(
+        Panel(meta, title=f"[bold]{spec.title}[/bold]", box=box.ROUNDED, border_style=color)
+    )
+
+    if spec.template == "map":
+        children = children_of(spec.id, all_specs)
+        if children:
+            lines = []
+            for c in children:
+                c_icon, c_color = STATUS_STYLE[c.status]
+                lines.append(
+                    f"[bold]{c.id}[/bold] {c.title}  [{c_color}]{c_icon} {c.status.value}[/{c_color}]"
+                )
+            body = "\n".join(lines)
+        else:
+            body = '[dim](none yet — spec new "<title>" --parent {} )[/dim]'.format(spec.id)
+        console.print(
+            Panel(body, title="[bold]Child specs[/bold]", box=box.ROUNDED, border_style="dim")
+        )
 
     if full:
         console.print()
         console.print(Markdown(spec.body))
         console.print(Rule(style="dim"))
     else:
-        console.print(f"[dim]Use [cyan]spec show {spec.id} --full[/cyan] to see the full spec body[/dim]")
+        console.print(
+            f"[dim]Use [cyan]spec show {spec.id} --full[/cyan] to see the full spec body[/dim]"
+        )
 
     console.print(f"[dim]{spec.file_path}[/dim]")

@@ -37,6 +37,9 @@ spec new "Title" --template adr --yes --json
 spec new "Title" --template api --yes --json
 spec new "Title" --template data-pipeline --yes --json
 spec new "Title" --template experiment --yes --json
+spec new "Title" --template map --yes --json          # idea too big/foggy for one spec
+spec new "Title" --blocked-by 0001,0002 --yes --json  # depends on other specs (blocks claim/advance)
+spec new "Title" --parent 0001 --yes --json           # links this spec to a map (informational, non-blocking)
 
 # Read
 spec list --json
@@ -46,7 +49,9 @@ spec list --status at-gate --json
 spec list --full --json                              # includes spec bodies
 spec list --assignee "alice" --json                 # filter by owner
 spec list --stale --json                            # stuck 3+ days
-spec show <id> --json
+spec list --blocked --json                          # waiting on an open blocker
+spec list --parent <map_id> --json                  # a map's child specs
+spec show <id> --json                               # for a map, also renders live child roster
 
 # Advance
 spec advance <id> --yes --json                      # auto-detects next state
@@ -76,8 +81,9 @@ spec claim <id> --as "my-agent" --yes --json        # specify agent name (defaul
 spec search "payment retry" --json
 spec search "schema migration" --status in-progress --json
 spec stats --json                                   # pipeline health object
-spec next --json                                    # top priority action (includes assignee + claimable_queue)
+spec next --json                                    # top priority action (includes assignee + claimable_queue + blocked_by)
 spec list --claimable --json                        # only unclaimed approved specs — ready to pick up
+spec list --blocked --json                          # specs waiting on an open blocker
 spec log --last 20 --json
 spec log --spec <id> --json                         # history for one spec
 spec log --query "gate" --json
@@ -124,6 +130,7 @@ draft → approved → in-progress → at-gate → implemented
 
 - `at-gate → implemented` always requires a human. Never pass this yourself without explicit confirmation.
 - Katas (if configured) block `in-progress → at-gate` automatically.
+- `blocked_by` (if set) blocks `approved → in-progress` automatically — a spec can't be claimed or started while any spec in its `blocked_by` list isn't `implemented`/`closed` yet. Set it with `spec new --blocked-by <id,id>`. `spec next` and `spec list --claimable` already skip blocked specs; use `spec list --blocked` to see what's stuck and why.
 
 ---
 
@@ -137,6 +144,23 @@ spec review <id> --json                                     # 4. pre-flight chec
 # if verdict is APPROVE or NEEDS WORK with minor issues, show user and ask
 spec advance <id> --yes --json                             # 5. draft → approved (after user OK)
 ```
+
+## Workflow: "this idea is too big/foggy to spec directly"
+
+If you can't yet write a scoped, testable spec — the destination is clear-ish but the shape of the work isn't — don't force it into one spec. Chart a map instead:
+
+```bash
+spec new "<destination>" --template map --yes --json         # 1. create the map (id: e.g. 0001)
+# fill in Destination + Not Yet Specified sections — the open questions
+spec advance 0001 --yes --json                                # 2. draft → approved once scoped enough to spawn children
+spec new "<title>" --template feature --parent 0001 --yes --json  # 3. one spec per decided/scoped piece
+spec new "<title>" --template feature --parent 0001 --yes --json
+spec show 0001 --json                                          # 4. renders live child roster — don't hand-maintain it
+# work the children through the normal lifecycle independently
+# the map itself reaches implemented once every child is implemented/closed and nothing is left in "Not Yet Specified"
+```
+
+`parent` only links — it doesn't block anything. Use `--blocked-by` on a child if its work genuinely can't start before another spec finishes.
 
 ## Workflow: agent picks up and delivers work
 

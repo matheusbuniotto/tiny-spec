@@ -20,31 +20,31 @@ CLOSE_REASONS = ("descoped", "wont-fix", "superseded", "duplicate")
 
 # Status display: (icon, rich color)
 STATUS_STYLE: dict[SpecStatus, tuple[str, str]] = {
-    SpecStatus.DRAFT:        ("⬡", "yellow"),
-    SpecStatus.APPROVED:     ("◉", "bright_blue"),
-    SpecStatus.IN_PROGRESS:  ("▶", "cyan"),
-    SpecStatus.AT_GATE:      ("⏸", "magenta"),
-    SpecStatus.IMPLEMENTED:  ("✓", "bright_green"),
-    SpecStatus.CLOSED:       ("✕", "dim"),
+    SpecStatus.DRAFT: ("⬡", "yellow"),
+    SpecStatus.APPROVED: ("◉", "bright_blue"),
+    SpecStatus.IN_PROGRESS: ("▶", "cyan"),
+    SpecStatus.AT_GATE: ("⏸", "magenta"),
+    SpecStatus.IMPLEMENTED: ("✓", "bright_green"),
+    SpecStatus.CLOSED: ("✕", "dim"),
 }
 
 # Valid state transitions
 TRANSITIONS: dict[SpecStatus, list[SpecStatus]] = {
-    SpecStatus.DRAFT:        [SpecStatus.APPROVED],
-    SpecStatus.APPROVED:     [SpecStatus.IN_PROGRESS, SpecStatus.DRAFT],
-    SpecStatus.IN_PROGRESS:  [SpecStatus.AT_GATE, SpecStatus.APPROVED],
-    SpecStatus.AT_GATE:      [SpecStatus.IMPLEMENTED, SpecStatus.IN_PROGRESS],
-    SpecStatus.IMPLEMENTED:  [],
-    SpecStatus.CLOSED:       [],
+    SpecStatus.DRAFT: [SpecStatus.APPROVED],
+    SpecStatus.APPROVED: [SpecStatus.IN_PROGRESS, SpecStatus.DRAFT],
+    SpecStatus.IN_PROGRESS: [SpecStatus.AT_GATE, SpecStatus.APPROVED],
+    SpecStatus.AT_GATE: [SpecStatus.IMPLEMENTED, SpecStatus.IN_PROGRESS],
+    SpecStatus.IMPLEMENTED: [],
+    SpecStatus.CLOSED: [],
 }
 
 TRANSITION_LABELS: dict[SpecStatus, str] = {
-    SpecStatus.APPROVED:     "approve",
-    SpecStatus.IN_PROGRESS:  "start",
-    SpecStatus.AT_GATE:      "gate",
-    SpecStatus.IMPLEMENTED:  "pass",
-    SpecStatus.DRAFT:        "revert to draft",
-    SpecStatus.CLOSED:       "close",
+    SpecStatus.APPROVED: "approve",
+    SpecStatus.IN_PROGRESS: "start",
+    SpecStatus.AT_GATE: "gate",
+    SpecStatus.IMPLEMENTED: "pass",
+    SpecStatus.DRAFT: "revert to draft",
+    SpecStatus.CLOSED: "close",
 }
 
 
@@ -58,6 +58,8 @@ class Spec(BaseModel):
     assignee: str = ""
     gate_notes: str = ""
     tags: list[str] = Field(default_factory=list)
+    blocked_by: list[str] = Field(default_factory=list)
+    parent: str = ""
     template: str = "feature"
     body: str = ""
     file_path: Optional[str] = None
@@ -86,6 +88,8 @@ class Spec(BaseModel):
             "assignee": self.assignee,
             "gate_notes": self.gate_notes,
             "tags": self.tags,
+            "blocked_by": self.blocked_by,
+            "parent": self.parent,
             "template": self.template,
             "file_path": self.file_path,
         }

@@ -87,6 +87,9 @@ spec advance 0001 --note "All criteria verified, tests green"   # → implemente
 | `spec gate-check 0001` | Show the Human Gate Checklist for a spec |
 | `spec sync` | Commit all `.spec/` changes to git |
 | `spec list --stale` | Show specs stuck for 3+ days |
+| `spec list --blocked` | Show specs waiting on an open blocker |
+| `spec list --parent 0001` | Show a map's child specs |
+| `spec new "title" --template map` | Create a map for an idea too big/foggy for one spec |
 | `spec dashboard` | Pipeline dashboard with aging alerts |
 | `spec config` | Show project config (stack, conventions, etc.) |
 
@@ -113,6 +116,18 @@ Every spec template includes a `## Human Gate Checklist` section. When the AI im
 When you create specs with `--ai`, the AI fills in **real commands and scenarios** specific to your feature — not generic placeholders.
 
 You can view the checklist anytime with `spec gate-check <id>`.
+
+---
+
+## Dependencies between specs
+
+Specs can declare what they're blocked on:
+
+```bash
+spec new "Add refund flow" --blocked-by 0003,0007
+```
+
+While any spec in `blocked_by` isn't `implemented` or `closed`, tiny-spec won't let this one be claimed or started — `spec claim`/`spec advance` refuse the transition with the blocking IDs. `spec next` and `spec list --claimable` skip blocked specs automatically; `spec list --blocked` shows what's stuck and on what.
 
 ---
 
@@ -183,12 +198,31 @@ When you run `spec new --ai`, this context is injected into the AI prompt. Your 
 
 ## Templates
 
-Four built-in templates, all markdown:
+All markdown:
 
 - **feature** — user story, acceptance criteria, implementation notes
 - **bug** — repro steps, root cause, fix plan
 - **adr** — architecture decision record (status, context, decision, consequences)
 - **api** — endpoint design, request/response shapes, auth, errors
+- **data-pipeline** — source/sink schema, SLAs, data quality checks
+- **experiment** — hypothesis, metrics, decision criteria, rollback plan
+- **map** — index for an idea too big or too foggy for one spec; see below
+
+---
+
+## Maps: for ideas too big for one spec
+
+A regular spec is a decided, scoped unit of work. Some ideas aren't there yet — the destination is clear-ish but the shape of the work isn't. For those, `map` is a template, not a new subsystem:
+
+```bash
+spec new "Rebuild onboarding" --template map --yes --json   # 0001
+spec new "Signup form redesign" --parent 0001 --yes --json  # 0002, linked
+spec new "Email verification" --parent 0001 --yes --json    # 0003, linked
+```
+
+`spec show 0001` renders the live child roster (fetched from `parent` links, not hand-maintained) alongside the map's own body — destination, decisions made so far, and what's still fog. Children go through the normal spec lifecycle independently; the map goes through it too, and reaches `implemented` once nothing is left undecided and every child is `implemented`/`closed`. `spec list --parent 0001` lists a map's children directly.
+
+`parent` is informational — it doesn't gate anything, unlike `blocked_by`. Use `blocked_by` when a child spec's *work* can't start until another spec is done; use `parent` to say a spec belongs to a larger initiative.
 
 ---
 
