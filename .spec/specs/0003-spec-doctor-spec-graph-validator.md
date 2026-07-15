@@ -4,17 +4,25 @@ author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.198743'
 gate: ''
-gate_notes: ''
+gate_notes: 'TDD: 10 new tests covering AC1-AC3 plus the remaining check types from
+  Technical Notes (tests/test_doctor.py). New ''spec doctor [--json]'' command checks
+  dangling blocked_by/parent refs, duplicate spec IDs, unassigned in-progress specs,
+  stale claims (reuse STALE_DAYS pattern), maps with all children done but still open,
+  at-gate specs missing a Human Gate Checklist (reuses gate_check''s extractor), and
+  circular blocked_by chains via DFS cycle detection. Exits 1 with findings, 0 clean.
+  65/65 tests pass, no new mypy/ruff issues. Manually verified: clean project prints
+  ''no issues'' exit 0, seeded dangling blocked_by is caught with spec ID + fix hint
+  on both human and --json output.'
 id: '0003'
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - validation
 - ci
 template: feature
 title: 'spec doctor: spec-graph validator'
-updated_at: '2026-07-15T17:47:19.208183'
+updated_at: '2026-07-15T17:47:29.041008'
 ---
 
 ## User Story
