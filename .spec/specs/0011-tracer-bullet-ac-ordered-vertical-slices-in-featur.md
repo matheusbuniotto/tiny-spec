@@ -4,18 +4,22 @@ author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T14:59:46.613465'
 gate: ''
-gate_notes: ''
+gate_notes: 'TDD: 6 unit tests + 2 opt-in integration tests (pytest -m integration)
+  covering AC1-AC4. Fixed 3 code-review findings (hardcoded numbering, template-set
+  duplication) and closed the AC3/AC4 CI-coverage gap with real-AI integration tests.
+  Added spec review --quick as a follow-on. 40/42 tests pass (2 pre-existing unrelated
+  failures). Manually verified spec new/review --quick against real AI.'
 id: '0011'
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - templates
 - tdd
 - review
 template: feature
 title: 'Tracer-bullet AC: ordered vertical slices in feature/api templates'
-updated_at: '2026-07-15T16:13:07.024627'
+updated_at: '2026-07-15T16:36:01.841865'
 ---
 
 ## User Story
@@ -51,11 +55,11 @@ No gate-level enforcement (no blocking `in-progress → at-gate` on AC ordering)
 
 ## Definition of Done
 
-- [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`uv run pytest tests/ -q`)
-- [ ] No regressions in related flows
-- [ ] Code reviewed or self-reviewed against project conventions
-- [ ] `.spec/` updated if any follow-on specs are needed
+- [x] All acceptance criteria above are met
+- [x] Tests written and passing (`uv run pytest tests/ -q`)
+- [x] No regressions in related flows
+- [x] Code reviewed or self-reviewed against project conventions
+- [x] `.spec/` updated if any follow-on specs are needed
 
 ## Human Gate Checklist
 

@@ -27,3 +27,4 @@ Append-only record of spec events.
 - **2026-07-15 16:02 UTC** — ✅ GATE PASSED `0010` **spec pr-body: generate Intent/Risk/Evidence from a spec** — PR #8
 - **2026-07-15 16:13 UTC** — `0011` **Tracer-bullet AC: ordered vertical slices in feature/api templates** → `approved`
 - **2026-07-15 16:13 UTC** — `0011` **Tracer-bullet AC: ordered vertical slices in feature/api templates** → `in-progress`
+- **2026-07-15 16:36 UTC** — 🔵 GATE OPENED `0011` **Tracer-bullet AC: ordered vertical slices in feature/api templates** — TDD: 6 unit tests + 2 opt-in integration tests (pytest -m integration) covering AC1-AC4. Fixed 3 code-review findings (hardcoded numbering, template-set duplication) and closed the AC3/AC4 CI-coverage gap with real-AI integration tests. Added spec review --quick as a follow-on. 40/42 tests pass (2 pre-existing unrelated failures). Manually verified spec new/review --quick against real AI.
