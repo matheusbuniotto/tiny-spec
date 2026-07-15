@@ -3,16 +3,18 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.198743'
+gate: ''
 gate_notes: ''
 id: '0003'
 parent: ''
-status: draft
+pr: ''
+status: approved
 tags:
 - validation
 - ci
 template: feature
 title: 'spec doctor: spec-graph validator'
-updated_at: '2026-07-15T11:16:51.198847'
+updated_at: '2026-07-15T17:47:19.005211'
 ---
 
 ## User Story
