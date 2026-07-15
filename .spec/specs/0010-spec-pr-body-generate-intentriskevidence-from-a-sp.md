@@ -3,16 +3,18 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T14:59:46.469648'
+gate: ''
 gate_notes: ''
 id: '0010'
 parent: ''
-status: draft
+pr: ''
+status: approved
 tags:
 - gate
 - pr-review
 template: feature
 title: 'spec pr-body: generate Intent/Risk/Evidence from a spec'
-updated_at: '2026-07-15T14:59:46.469771'
+updated_at: '2026-07-15T15:19:11.754524'
 ---
 
 ## User Story

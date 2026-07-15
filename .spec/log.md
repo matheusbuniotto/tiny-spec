@@ -21,3 +21,4 @@ Append-only record of spec events.
 - **2026-07-15 15:10 UTC** — 🔵 GATE OPENED `0008` **Gate modes: local, draft, pr** — Implemented via TDD: Config.gate (default local, read+write), Spec.gate/pr frontmatter fields, effective_gate() helper, --pr flag on spec advance (satisfies notes-required, records pr distinctly), gate_mode surfaced in spec show/gate-check --json. 9/9 new tests pass (tests/test_gate_modes.py). Full suite 27/29 — 2 pre-existing failures in test_verify_checks_rename.py confirmed unrelated via git stash. AC1-AC4 all covered by tests.
 - **2026-07-15 15:17 UTC** — ✅ GATE PASSED `0008` **Gate modes: local, draft, pr** — PR #7
 - **2026-07-15 15:18 UTC** — ✅ GATE PASSED `0002` **Rename kata to checks, run-kata to spec verify** — PR #6
+- **2026-07-15 15:19 UTC** — `0010` **spec pr-body: generate Intent/Risk/Evidence from a spec** → `approved`
