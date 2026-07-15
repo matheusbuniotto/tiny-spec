@@ -305,3 +305,15 @@ Fourth (last) bet from the session-8 improvement map: audit these three for redu
 - Drift detection uses file mtime vs `updated_at` frontmatter comparison
 - `spec next` prioritizes by status severity then age
 - Dashboard STALE_DAYS threshold is 3 (hardcoded for now)
+
+## Session 10: AI-first engineering mapping → tasks/ + backlog.md
+
+Researched AI-first eng practices (AXI principles from axi.md via Wayback, no-mistakes repo,
+AGENTS.md standard, worktree workflows). Found bug: `spec new --json` crashes on non-TTY stdin
+(questionary prompts fire without --yes). Produced:
+- `tasks/001`–`008` — PR-sized task files, product-first order: json-non-interactive fix,
+  agent output ergonomics (help[]/counts/truncation), kata→checks rename (`spec verify`),
+  `spec doctor`, `claim --worktree`, AGENTS.md scaffold, repo CI+ruff, CLI smoke + skill-drift tests.
+- `backlog.md` — deferred: token saving (minimal schemas, TOON, body-less), action-classified
+  gate items, doctor --fix, intent-verbatim wording, `init --ci`, mypy; rejected list (daemon/TUI/etc).
+Files changed: tasks/*.md (new), backlog.md (new).
