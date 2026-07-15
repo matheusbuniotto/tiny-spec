@@ -8,18 +8,25 @@ gate_notes: 'TDD: 6 unit tests + 2 opt-in integration tests (pytest -m integrati
   covering AC1-AC4. Fixed 3 code-review findings (hardcoded numbering, template-set
   duplication) and closed the AC3/AC4 CI-coverage gap with real-AI integration tests.
   Added spec review --quick as a follow-on. 40/42 tests pass (2 pre-existing unrelated
-  failures). Manually verified spec new/review --quick against real AI.'
+  failures). Manually verified spec new/review --quick against real AI.
+
+
+  ---
+
+  Merged via PR#9. Post-merge cleanup: cherry-picked the --quick-flag revert (unpushed
+  scope-trim from the branch) directly onto main since PR#9 had merged the pre-revert
+  commit. 41/41 tests green on main; --quick flag fully absent.'
 id: '0011'
 parent: ''
 pr: ''
-status: at-gate
+status: implemented
 tags:
 - templates
 - tdd
 - review
 template: feature
 title: 'Tracer-bullet AC: ordered vertical slices in feature/api templates'
-updated_at: '2026-07-15T16:36:01.841865'
+updated_at: '2026-07-15T17:05:11.020081'
 ---
 
 ## User Story
