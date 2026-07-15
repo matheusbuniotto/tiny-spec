@@ -55,25 +55,6 @@ def _pipeline(specs) -> Columns:
     return Columns(panels, equal=True, expand=True)
 
 
-def _summary(specs) -> Panel:
-    rows = []
-    for status in SpecStatus:
-        icon, color = STATUS_STYLE[status]
-        count = sum(1 for s in specs if s.status == status)
-        bar = "█" * count + "░" * max(0, 10 - count)
-        rows.append(
-            f"[{color}]{icon} {status.value:<13}[/{color}] [{color}]{bar}[/{color}] [bold]{count}[/bold]"
-        )
-    rows += ["", f"[dim]Total[/dim]  [bold]{len(specs)}[/bold]"]
-    return Panel(
-        "\n".join(rows),
-        title="[bold]Summary[/bold]",
-        box=box.ROUNDED,
-        border_style="dim",
-        padding=(0, 1),
-    )
-
-
 def _alerts(specs) -> str:
     lines = []
     at_gate = [s for s in specs if s.status == SpecStatus.AT_GATE]
@@ -115,11 +96,10 @@ def _layout(specs, live: bool = False) -> Table:
     if alerts:
         outer.add_row(Panel(alerts, box=box.ROUNDED, border_style="yellow", padding=(0, 1)))
 
-    body = Table.grid(expand=True)
-    body.add_column(ratio=4)
-    body.add_column(ratio=1)
-    body.add_row(_pipeline(specs), _summary(specs))
-    outer.add_row(body)
+    outer.add_row(_pipeline(specs))
+    outer.add_row(
+        f"[dim]{len(specs)} spec{'s' if len(specs) != 1 else ''} total — [/dim][cyan]spec stats[/cyan][dim] for health metrics and cycle time[/dim]"
+    )
     return outer
 
 
