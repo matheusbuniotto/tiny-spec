@@ -8,14 +8,14 @@ gate_notes: ''
 id: '0011'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - templates
 - tdd
 - review
 template: feature
 title: 'Tracer-bullet AC: ordered vertical slices in feature/api templates'
-updated_at: '2026-07-15T16:13:06.838634'
+updated_at: '2026-07-15T16:13:07.024627'
 ---
 
 ## User Story
