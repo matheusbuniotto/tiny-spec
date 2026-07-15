@@ -7,6 +7,7 @@ from typing import Optional
 import typer
 
 from ..config import load_config
+from ..constitution import approved_glossary, propose_glossary_terms
 from ..models import STATUS_STYLE, Spec, SpecStatus
 from ..storage import append_log, find_root, next_id, save_spec
 from ..ui import console, err_console, error, success
@@ -98,9 +99,10 @@ def cmd_new(
     resolved_parent = parent.strip().zfill(4) if parent and parent.strip() else ""
 
     # Build body
+    proposed_terms: list[str] = []
     if use_ai:
         try:
-            from ..integrations.ai import draft_spec_content
+            from ..integrations.ai import draft_spec_content, extract_glossary_proposals
 
             with console.status(f"[cyan]Drafting via {cfg.ai_provider}...[/cyan]", spinner="dots"):
                 body = draft_spec_content(
@@ -110,7 +112,11 @@ def cmd_new(
                     provider=cfg.ai_provider,
                     model=cfg.ai_model,
                     base_url=cfg.ai_base_url,
+                    glossary=approved_glossary(root),
                 )
+            body, terms = extract_glossary_proposals(body)
+            if terms:
+                proposed_terms = propose_glossary_terms(root, terms)
         except Exception as e:
             err_console.print(f"[yellow]AI draft failed:[/yellow] {e}\n[dim]Using template.[/dim]")
             body = _load_template(resolved_template)
@@ -144,10 +150,17 @@ def cmd_new(
         out = {**spec.to_dict(), "file_path": str(path)}
         if git_sha:
             out["git_commit"] = git_sha
+        out["glossary_proposed"] = proposed_terms
         typer.echo(json.dumps(out))
     else:
         icon, color = STATUS_STYLE[SpecStatus.DRAFT]
         git_line = f"\n  Git      : [green]{git_sha}[/green]" if git_sha else ""
+        glossary_line = (
+            f"\n\n  [dim]Proposed {len(proposed_terms)} glossary term"
+            f"{'s' if len(proposed_terms) != 1 else ''} — review in constitution.md[/dim]"
+            if proposed_terms
+            else ""
+        )
         success(
             "Spec created",
             (
@@ -155,7 +168,8 @@ def cmd_new(
                 f"  Template : [cyan]{resolved_template}[/cyan]\n"
                 f"  Status   : [{color}]{icon} draft[/{color}]\n"
                 f"  File     : [dim]{path.relative_to(root)}[/dim]"
-                f"{git_line}\n\n"
+                f"{git_line}"
+                f"{glossary_line}\n\n"
                 f"  [dim]Next:[/dim] [cyan]spec advance {spec_id}[/cyan]"
             ),
         )
