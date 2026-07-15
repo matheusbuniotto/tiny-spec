@@ -18,44 +18,39 @@ updated_at: '2026-07-15T14:59:46.613572'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As an **implementer (human or AI agent) picking up a feature/api spec**, I want **its Acceptance Criteria to already be ordered as a tracer-bullet sequence**, so that **I implement it as thin vertical slices instead of guessing how to decompose a flat requirements list**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> tiny-spec's global `/tdd` skill already teaches tracer-bullet TDD (one test → RED → minimal fix → GREEN → repeat, never all tests up front), but nothing in tiny-spec *itself* reinforces this at the point where it matters most — spec authoring. Today's `feature`/`api` templates present AC as a flat, unordered checklist (see spec 0002's own AC1–AC3), which invites horizontal-slice implementation (build everything, then test everything) even when an agent knows the tracer-bullet discipline in the abstract.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+Reshape the `feature` and `api` templates' Acceptance Criteria section so AC are explicitly an ordered sequence: AC1 must describe the thinnest possible end-to-end path (something demonstrably working, even if minimal), and each subsequent AC adds exactly one increment on top of the previous one — never an unrelated requirement bolted on. Update the template's own guidance text to state this ordering rule (replacing the current generic "each criterion must be independently testable" note). `spec review` gains one more judgment: does AC1 read as a thin end-to-end slice, and does each later AC read as a single increment rather than a grab-bag requirement — flagged as a `NEEDS WORK` finding when it doesn't, same advisory severity as today's other review checks. `bug`/`adr`/`data-pipeline`/`experiment` templates are untouched — a bug fix is usually one slice by nature, and data-pipeline/experiment already have their own structured DQ/Human-Gate sections that don't map onto "increments."
 
 ## Acceptance Criteria
 
-> Each criterion must be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Observable outcome — not an implementation detail]
-- [ ] **AC2**: [Edge case or error path explicitly covered]
-- [ ] **AC3**: [Performance, security, or accessibility requirement if applicable]
+- [ ] **AC1**: `spec new "<title>" --template feature` (no --ai) produces a spec whose AC section template text explicitly instructs "AC1 = thinnest end-to-end slice, AC2+ = one increment each" — visible in the raw scaffolded file.
+- [ ] **AC2**: The same instruction appears in the `api` template; `bug`, `adr`, `data-pipeline`, `experiment` templates are unchanged (verify via diff against their current content).
+- [ ] **AC3**: `spec review <id>` on a feature/api spec whose AC list is an unordered flat bag (e.g. AC1 is unrelated to AC2, or AC1 isn't independently runnable end-to-end) returns a `NEEDS WORK` finding calling out the ordering, not just today's existing checks.
+- [ ] **AC4**: `spec review <id>` on a feature/api spec whose AC is already a proper ordered sequence (e.g. rewrite spec 0002's AC as a positive test case) does not raise this new finding.
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+Changes are confined to `templates/feature.md`, `templates/api.md` (or wherever their template strings live, likely alongside `templates/data-pipeline.md`), and the AI review prompt used by `spec review` (wherever that prompt template lives — same place spec 0002's rename touched for review-adjacent strings, if any). No schema/data-model change — AC stays a plain markdown checklist, just with different guidance text and one more advisory review dimension.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None — independent of specs 0008/0009/0010.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+No gate-level enforcement (no blocking `in-progress → at-gate` on AC ordering) — purely template guidance plus advisory review, per the earlier discussion ruling out commit-granularity policing as too fuzzy to enforce deterministically.
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -63,10 +58,9 @@ updated_at: '2026-07-15T14:59:46.613572'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] **Walk the happy path**: `spec new "test" --template feature`, read the scaffolded AC section, confirm the ordering instruction is present and clear
+- [ ] **Test the failure case**: `spec review` against a spec with deliberately flat/unordered AC — confirm the new NEEDS WORK finding actually fires
 - [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
 - [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?
