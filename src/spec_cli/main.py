@@ -277,11 +277,14 @@ def log(
 @app.command(rich_help_panel="Quality")
 def review(
     spec_id: str = typer.Argument(..., help="Spec ID or prefix"),
+    quick: bool = typer.Option(
+        False, "--quick", help="Fast pre-flight check (3 checks) instead of the full review"
+    ),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """AI pre-flight review of a spec before approval."""
-    cmd_review(spec_id, json_out, root)
+    cmd_review(spec_id, json_out, root, quick=quick)
 
 
 @app.command("gate-check", rich_help_panel="Quality")

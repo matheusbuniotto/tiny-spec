@@ -68,14 +68,43 @@ Be ruthless about vague acceptance criteria. If you can't write a test for a cri
 Return only the markdown — no preamble.\
 """
 
+_QUICK_REVIEW_PROMPT = """\
+You are a senior tech lead doing a fast pre-flight check on a spec — not a full review.
+
+## Spec to review
+Title: {title}
+Template: {template}
+Status: {status}
+
+{body}
+
+---
+
+In under 150 words, check only:
+1. Is the title a clear, action-oriented verb phrase?
+2. Is every acceptance criterion independently testable and binary (pass/fail)?
+3. Is at least one thing explicitly out of scope?
+
+### ❌ Blockers
+[Issues that MUST be fixed before approval. If none, write "None."]
+
+### Verdict
+**[APPROVE / NEEDS WORK / REJECT]** — one sentence explaining the decision.
+
+Return only the markdown — no preamble.\
+"""
+
 _AC_ORDERING_CHECK = """\
-8. **AC ordering (tracer-bullet)** — Does AC1 read as the thinnest possible end-to-end slice \
+Also check — **AC ordering (tracer-bullet)**: Does AC1 read as the thinnest possible end-to-end slice \
 (something demonstrably working, even if minimal)? Does each later AC add exactly one increment \
 on top of the previous one, rather than an unrelated requirement bolted on? Flag as NEEDS WORK if \
 AC reads as a flat, unordered requirements list instead of a tracer-bullet sequence.
 """
 
-_TRACER_BULLET_TEMPLATES = {"feature", "api"}
+# Templates whose Acceptance Criteria section is expected to be an ordered tracer-bullet
+# sequence (see templates/feature.md, templates/api.md). Single source of truth — tests
+# import this instead of re-hardcoding the set.
+TRACER_BULLET_TEMPLATES = {"feature", "api"}
 
 
 def _call_ai(prompt: str, provider: str, model: str, base_url: str) -> str:
@@ -122,27 +151,37 @@ def _call_ai(prompt: str, provider: str, model: str, base_url: str) -> str:
     raise RuntimeError(f"Unknown ai_provider: {provider}")
 
 
-def cmd_review(spec_id: str, json_out: bool, root: Path) -> None:
+def cmd_review(spec_id: str, json_out: bool, root: Path, *, quick: bool = False) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
         error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
 
     cfg = load_config(root)
-    sd = spec_dir(root)
-    constitution = (
-        (sd / "constitution.md").read_text() if (sd / "constitution.md").exists() else "(none)"
-    )
 
-    prompt = _REVIEW_PROMPT.format(
-        context=cfg.context_summary() or "(no project context configured)",
-        constitution=constitution,
-        title=spec.title,
-        template=spec.template,
-        status=spec.status.value,
-        body=spec.body,
-        ac_ordering_check=_AC_ORDERING_CHECK if spec.template in _TRACER_BULLET_TEMPLATES else "",
-    )
+    if quick:
+        prompt = _QUICK_REVIEW_PROMPT.format(
+            title=spec.title,
+            template=spec.template,
+            status=spec.status.value,
+            body=spec.body,
+        )
+    else:
+        sd = spec_dir(root)
+        constitution = (
+            (sd / "constitution.md").read_text() if (sd / "constitution.md").exists() else "(none)"
+        )
+        prompt = _REVIEW_PROMPT.format(
+            context=cfg.context_summary() or "(no project context configured)",
+            constitution=constitution,
+            title=spec.title,
+            template=spec.template,
+            status=spec.status.value,
+            body=spec.body,
+            ac_ordering_check=_AC_ORDERING_CHECK
+            if spec.template in TRACER_BULLET_TEMPLATES
+            else "",
+        )
 
     if not json_out:
         icon, color = STATUS_STYLE[spec.status]
