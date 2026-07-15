@@ -1,0 +1,32 @@
+# tiny-spec configuration
+
+author: Matheus Buniotto
+ai_provider: claude-code          # claude-code | anthropic | openai
+ai_model: ""                      # leave blank for provider default
+ai_base_url: ""                   # openai provider only (Ollama, Groq, etc.)
+default_template: feature         # feature | bug | adr | api
+git_auto_commit: true             # auto-commit .spec/ on lifecycle transitions
+
+# --- Kata harness (must pass before spec can enter at-gate) ---
+# katas:
+#   - name: tests
+#     command: pytest
+#     description: Full test suite must pass
+#   - name: lint
+#     command: ruff check .
+#     description: No linting errors
+#   - name: typecheck
+#     command: mypy src
+#     description: No type errors
+katas: []
+
+# --- Project context (enriches AI drafts) ---
+project_name: ""
+description: ""
+languages: []                     # e.g. [python, typescript]
+frameworks: []                    # e.g. [fastapi, react]
+libraries: []                     # e.g. [pydantic, sqlalchemy]
+testing: ""                       # e.g. "pytest, >80% coverage"
+architecture: ""                  # e.g. "hexagonal, event-driven"
+conventions: []                   # e.g. [snake_case, REST not GraphQL]
+out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
