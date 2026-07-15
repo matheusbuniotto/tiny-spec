@@ -4,17 +4,26 @@ author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.354060'
 gate: ''
-gate_notes: ''
+gate_notes: 'TDD: 7 tests covering AC1-AC3 plus two regression tests from code review
+  (failed worktree add reported honestly not as success; branch survives after manual
+  worktree removal is reused not errored). New ''spec claim --worktree'' runs git
+  worktree add into a sibling <repo>-spec-<id> dir on branch spec/<id>-<slug>, idempotent
+  via git.py''s git_worktree_add/find_worktree_for_spec helpers. spec advance/close
+  print a git worktree remove reminder on terminal transitions (no auto-delete), deduped
+  into ui.py''s worktree_reminder_fields/print_worktree_reminder. Includes the spec''s
+  required ''run your install step'' hint. Claiming without --worktree is byte-identical
+  to before. 72/72 tests pass, no new mypy/ruff issues. Manually verified end-to-end
+  in a scratch repo: create+idempotent-reuse+terminal-transition reminder all work.'
 id: '0004'
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - claim
 - worktree
 template: feature
 title: 'spec claim --worktree: parallel-agent isolation'
-updated_at: '2026-07-15T20:10:03.821836'
+updated_at: '2026-07-15T20:24:29.429826'
 ---
 
 ## User Story
