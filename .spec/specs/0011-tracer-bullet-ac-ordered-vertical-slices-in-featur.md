@@ -3,17 +3,23 @@ assignee: ''
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T14:59:46.613465'
-gate_notes: ''
+gate: ''
+gate_notes: 'TDD: 6 unit tests + 2 opt-in integration tests (pytest -m integration)
+  covering AC1-AC4. Fixed 3 code-review findings (hardcoded numbering, template-set
+  duplication) and closed the AC3/AC4 CI-coverage gap with real-AI integration tests.
+  Added spec review --quick as a follow-on. 40/42 tests pass (2 pre-existing unrelated
+  failures). Manually verified spec new/review --quick against real AI.'
 id: '0011'
 parent: ''
-status: draft
+pr: ''
+status: at-gate
 tags:
 - templates
 - tdd
 - review
 template: feature
 title: 'Tracer-bullet AC: ordered vertical slices in feature/api templates'
-updated_at: '2026-07-15T14:59:46.613572'
+updated_at: '2026-07-15T16:36:01.841865'
 ---
 
 ## User Story
@@ -30,10 +36,10 @@ Reshape the `feature` and `api` templates' Acceptance Criteria section so AC are
 
 ## Acceptance Criteria
 
-- [ ] **AC1**: `spec new "<title>" --template feature` (no --ai) produces a spec whose AC section template text explicitly instructs "AC1 = thinnest end-to-end slice, AC2+ = one increment each" — visible in the raw scaffolded file.
-- [ ] **AC2**: The same instruction appears in the `api` template; `bug`, `adr`, `data-pipeline`, `experiment` templates are unchanged (verify via diff against their current content).
-- [ ] **AC3**: `spec review <id>` on a feature/api spec whose AC list is an unordered flat bag (e.g. AC1 is unrelated to AC2, or AC1 isn't independently runnable end-to-end) returns a `NEEDS WORK` finding calling out the ordering, not just today's existing checks.
-- [ ] **AC4**: `spec review <id>` on a feature/api spec whose AC is already a proper ordered sequence (e.g. rewrite spec 0002's AC as a positive test case) does not raise this new finding.
+- [x] **AC1**: `spec new "<title>" --template feature` (no --ai) produces a spec whose AC section template text explicitly instructs "AC1 = thinnest end-to-end slice, AC2+ = one increment each" — visible in the raw scaffolded file.
+- [x] **AC2**: The same instruction appears in the `api` template; `bug`, `adr`, `data-pipeline`, `experiment` templates are unchanged (verify via diff against their current content).
+- [x] **AC3**: `spec review <id>` on a feature/api spec whose AC list is an unordered flat bag (e.g. AC1 is unrelated to AC2, or AC1 isn't independently runnable end-to-end) returns a `NEEDS WORK` finding calling out the ordering, not just today's existing checks.
+- [x] **AC4**: `spec review <id>` on a feature/api spec whose AC is already a proper ordered sequence (e.g. rewrite spec 0002's AC as a positive test case) does not raise this new finding.
 
 ## Technical Notes
 
@@ -49,11 +55,11 @@ No gate-level enforcement (no blocking `in-progress → at-gate` on AC ordering)
 
 ## Definition of Done
 
-- [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`uv run pytest tests/ -q`)
-- [ ] No regressions in related flows
-- [ ] Code reviewed or self-reviewed against project conventions
-- [ ] `.spec/` updated if any follow-on specs are needed
+- [x] All acceptance criteria above are met
+- [x] Tests written and passing (`uv run pytest tests/ -q`)
+- [x] No regressions in related flows
+- [x] Code reviewed or self-reviewed against project conventions
+- [x] `.spec/` updated if any follow-on specs are needed
 
 ## Human Gate Checklist
 

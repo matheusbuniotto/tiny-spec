@@ -30,3 +30,7 @@ packages = ["src/spec_cli"]
 
 [tool.ruff]
 line-length = 100
+
+[tool.pytest.ini_options]
+markers = ["integration: hits a real AI provider, slow — opt in with `-m integration`"]
+addopts = "-m 'not integration'"

@@ -1,4 +1,5 @@
 """AI pre-flight review of a spec before human approval."""
+
 from __future__ import annotations
 
 import json
@@ -6,14 +7,14 @@ import subprocess
 from pathlib import Path
 
 import typer
-from rich.panel import Panel
-from rich.markdown import Markdown
-from rich.rule import Rule
 from rich import box
+from rich.markdown import Markdown
+from rich.panel import Panel
+from rich.rule import Rule
 
 from ..config import load_config
 from ..models import STATUS_STYLE
-from ..storage import find_spec, find_root, spec_dir
+from ..storage import find_root, find_spec, spec_dir
 from ..ui import console, error
 
 _REVIEW_PROMPT = """\
@@ -47,7 +48,7 @@ For each issue, cite the exact section and what's wrong.
 5. **Human Gate Checklist** — Are all items specific? Flag any placeholder like "<command>" or generic phrases like "run the tests".
 6. **Missing information** — What critical information is absent that an implementer would need?
 7. **Risk** — What's the biggest implementation risk not addressed in the spec?
-
+{ac_ordering_check}
 ## Output format
 Return a markdown review with these exact sections:
 
@@ -67,20 +68,62 @@ Be ruthless about vague acceptance criteria. If you can't write a test for a cri
 Return only the markdown — no preamble.\
 """
 
+_QUICK_REVIEW_PROMPT = """\
+You are a senior tech lead doing a fast pre-flight check on a spec — not a full review.
+
+## Spec to review
+Title: {title}
+Template: {template}
+Status: {status}
+
+{body}
+
+---
+
+In under 150 words, check only:
+1. Is the title a clear, action-oriented verb phrase?
+2. Is every acceptance criterion independently testable and binary (pass/fail)?
+3. Is at least one thing explicitly out of scope?
+
+### ❌ Blockers
+[Issues that MUST be fixed before approval. If none, write "None."]
+
+### Verdict
+**[APPROVE / NEEDS WORK / REJECT]** — one sentence explaining the decision.
+
+Return only the markdown — no preamble.\
+"""
+
+_AC_ORDERING_CHECK = """\
+Also check — **AC ordering (tracer-bullet)**: Does AC1 read as the thinnest possible end-to-end slice \
+(something demonstrably working, even if minimal)? Does each later AC add exactly one increment \
+on top of the previous one, rather than an unrelated requirement bolted on? Flag as NEEDS WORK if \
+AC reads as a flat, unordered requirements list instead of a tracer-bullet sequence.
+"""
+
+# Templates whose Acceptance Criteria section is expected to be an ordered tracer-bullet
+# sequence (see templates/feature.md, templates/api.md). Single source of truth — tests
+# import this instead of re-hardcoding the set.
+TRACER_BULLET_TEMPLATES = {"feature", "api"}
+
 
 def _call_ai(prompt: str, provider: str, model: str, base_url: str) -> str:
     if provider == "claude-code":
         result = subprocess.run(
             ["claude", "-p", prompt],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True,
+            text=True,
+            timeout=120,
         )
         if result.returncode != 0:
             raise RuntimeError(result.stderr.strip())
         return result.stdout.strip()
 
     if provider == "anthropic":
-        import anthropic
         import os
+
+        import anthropic
+
         client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         msg = client.messages.create(
             model=model or "claude-opus-4-5",
@@ -90,8 +133,10 @@ def _call_ai(prompt: str, provider: str, model: str, base_url: str) -> str:
         return msg.content[0].text
 
     if provider == "openai":
-        import openai
         import os
+
+        import openai
+
         client = openai.OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY", "sk-placeholder"),
             base_url=base_url or None,
@@ -106,35 +151,52 @@ def _call_ai(prompt: str, provider: str, model: str, base_url: str) -> str:
     raise RuntimeError(f"Unknown ai_provider: {provider}")
 
 
-def cmd_review(spec_id: str, json_out: bool, root: Path) -> None:
+def cmd_review(spec_id: str, json_out: bool, root: Path, *, quick: bool = False) -> None:
     root = find_root(root)
     spec = find_spec(root, spec_id)
     if not spec:
         error(f"Spec not found: {spec_id}", json_out, {"error": "not_found", "id": spec_id})
 
     cfg = load_config(root)
-    sd = spec_dir(root)
-    constitution = (sd / "constitution.md").read_text() if (sd / "constitution.md").exists() else "(none)"
 
-    prompt = _REVIEW_PROMPT.format(
-        context=cfg.context_summary() or "(no project context configured)",
-        constitution=constitution,
-        title=spec.title,
-        template=spec.template,
-        status=spec.status.value,
-        body=spec.body,
-    )
+    if quick:
+        prompt = _QUICK_REVIEW_PROMPT.format(
+            title=spec.title,
+            template=spec.template,
+            status=spec.status.value,
+            body=spec.body,
+        )
+    else:
+        sd = spec_dir(root)
+        constitution = (
+            (sd / "constitution.md").read_text() if (sd / "constitution.md").exists() else "(none)"
+        )
+        prompt = _REVIEW_PROMPT.format(
+            context=cfg.context_summary() or "(no project context configured)",
+            constitution=constitution,
+            title=spec.title,
+            template=spec.template,
+            status=spec.status.value,
+            body=spec.body,
+            ac_ordering_check=_AC_ORDERING_CHECK
+            if spec.template in TRACER_BULLET_TEMPLATES
+            else "",
+        )
 
     if not json_out:
         icon, color = STATUS_STYLE[spec.status]
         console.print()
-        console.print(Panel(
-            f"[bold]{spec.id}[/bold] — {spec.title}\n"
-            f"[{color}]{icon} {spec.status.value}[/{color}]  [dim]template: {spec.template}[/dim]\n\n"
-            f"[dim]Reviewing via[/dim] [cyan]{cfg.ai_provider}[/cyan][dim]...[/dim]",
-            title="[bold cyan]◈ AI Spec Review[/bold cyan]",
-            box=box.ROUNDED, border_style="cyan", padding=(0, 2),
-        ))
+        console.print(
+            Panel(
+                f"[bold]{spec.id}[/bold] — {spec.title}\n"
+                f"[{color}]{icon} {spec.status.value}[/{color}]  [dim]template: {spec.template}[/dim]\n\n"
+                f"[dim]Reviewing via[/dim] [cyan]{cfg.ai_provider}[/cyan][dim]...[/dim]",
+                title="[bold cyan]◈ AI Spec Review[/bold cyan]",
+                box=box.ROUNDED,
+                border_style="cyan",
+                padding=(0, 2),
+            )
+        )
         console.print()
 
     try:
@@ -143,7 +205,8 @@ def cmd_review(spec_id: str, json_out: bool, root: Path) -> None:
     except FileNotFoundError:
         error(
             "Claude Code CLI not found. Set ai_provider to 'anthropic' or 'openai' in .spec/config.yaml.",
-            json_out, {"error": "claude_not_found"},
+            json_out,
+            {"error": "claude_not_found"},
         )
     except Exception as e:
         error(str(e), json_out, {"error": "ai_failed", "detail": str(e)})
@@ -158,15 +221,24 @@ def cmd_review(spec_id: str, json_out: bool, root: Path) -> None:
             verdict = "REJECT"
 
     if json_out:
-        typer.echo(json.dumps({
-            "id": spec.id,
-            "title": spec.title,
-            "verdict": verdict,
-            "review": review_text,
-        }))
+        typer.echo(
+            json.dumps(
+                {
+                    "id": spec.id,
+                    "title": spec.title,
+                    "verdict": verdict,
+                    "review": review_text,
+                }
+            )
+        )
         return
 
-    verdict_colors = {"APPROVE": "bright_green", "NEEDS WORK": "yellow", "REJECT": "red", "UNKNOWN": "dim"}
+    verdict_colors = {
+        "APPROVE": "bright_green",
+        "NEEDS WORK": "yellow",
+        "REJECT": "red",
+        "UNKNOWN": "dim",
+    }
     verdict_icons = {"APPROVE": "✓", "NEEDS WORK": "⚠", "REJECT": "✕", "UNKNOWN": "?"}
     vc = verdict_colors[verdict]
     vi = verdict_icons[verdict]
@@ -178,7 +250,11 @@ def cmd_review(spec_id: str, json_out: bool, root: Path) -> None:
     console.print(Rule(style="dim"))
 
     if verdict == "APPROVE":
-        console.print(f"\n  [bright_green]✓[/bright_green] Ready to approve: [cyan]spec advance {spec.id}[/cyan]\n")
+        console.print(
+            f"\n  [bright_green]✓[/bright_green] Ready to approve: [cyan]spec advance {spec.id}[/cyan]\n"
+        )
     elif verdict in ("NEEDS WORK", "REJECT"):
-        console.print(f"\n  [yellow]⚠[/yellow] Fix issues then re-review: [cyan]spec review {spec.id}[/cyan]"
-                      f"  or edit: [cyan]spec edit {spec.id}[/cyan]\n")
+        console.print(
+            f"\n  [yellow]⚠[/yellow] Fix issues then re-review: [cyan]spec review {spec.id}[/cyan]"
+            f"  or edit: [cyan]spec edit {spec.id}[/cyan]\n"
+        )

@@ -14,14 +14,14 @@ gate_notes: 'Implemented via TDD: spec pr-body <id> [--json] renders Intent (Use
   failures).'
 id: '0010'
 parent: ''
-pr: ''
-status: at-gate
+pr: '8'
+status: implemented
 tags:
 - gate
 - pr-review
 template: feature
 title: 'spec pr-body: generate Intent/Risk/Evidence from a spec'
-updated_at: '2026-07-15T15:24:29.897830'
+updated_at: '2026-07-15T16:02:15.306169'
 ---
 
 ## User Story
