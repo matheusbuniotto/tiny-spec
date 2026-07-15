@@ -9,3 +9,4 @@ Append-only record of spec events.
 - **2026-07-15 11:16 UTC** — `0005` **AGENTS.md scaffold + SessionStart hook** created (template: feature)
 - **2026-07-15 11:16 UTC** — `0006` **Repo hygiene: CI, ruff config, own AGENTS.md** created (template: feature)
 - **2026-07-15 11:16 UTC** — `0007` **CLI smoke tests + skill-drift test** created (template: feature)
+- **2026-07-15 11:19 UTC** — `0002` **Rename kata to checks, run-kata to spec verify** → `approved`

@@ -6,13 +6,13 @@ created_at: '2026-07-15T11:16:51.045572'
 gate_notes: ''
 id: '0002'
 parent: ''
-status: draft
+status: approved
 tags:
 - ergonomics
 - naming
 template: feature
 title: Rename kata to checks, run-kata to spec verify
-updated_at: '2026-07-15T11:16:51.045675'
+updated_at: '2026-07-15T11:19:01.319792'
 ---
 
 ## User Story
