@@ -13,17 +13,26 @@ gate_notes: 'TDD: 7 tests covering AC1-AC3 plus two regression tests from code r
   into ui.py''s worktree_reminder_fields/print_worktree_reminder. Includes the spec''s
   required ''run your install step'' hint. Claiming without --worktree is byte-identical
   to before. 72/72 tests pass, no new mypy/ruff issues. Manually verified end-to-end
-  in a scratch repo: create+idempotent-reuse+terminal-transition reminder all work.'
+  in a scratch repo: create+idempotent-reuse+terminal-transition reminder all work.
+
+
+  ---
+
+  Gate passed. Tests 72/72 green, ruff/mypy diff clean vs main, manual walkthrough
+  done in scratch repo: worktree+branch created correctly at AC1 sibling path with
+  spec files, idempotent reuse on second claim confirmed (AC2), terminal-transition
+  worktree-remove reminder confirmed on advance to implemented. AC1-AC3 all demonstrably
+  met.'
 id: '0004'
 parent: ''
-pr: ''
-status: at-gate
+pr: https://github.com/matheusbuniotto/tiny-spec/pull/12
+status: implemented
 tags:
 - claim
 - worktree
 template: feature
 title: 'spec claim --worktree: parallel-agent isolation'
-updated_at: '2026-07-15T20:24:29.429826'
+updated_at: '2026-07-16T23:43:52.187844'
 ---
 
 ## User Story
