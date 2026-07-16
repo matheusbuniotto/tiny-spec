@@ -11,9 +11,10 @@ import typer
 from rich import box
 from rich.panel import Panel
 
+from ..integrations.git import find_worktree_for_spec
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
 from ..storage import append_log, find_root, find_spec, save_spec
-from ..ui import console, error, not_found
+from ..ui import console, error, not_found, print_worktree_reminder, worktree_reminder_fields
 
 
 def cmd_close(
@@ -79,11 +80,15 @@ def cmd_close(
         except Exception:
             pass
 
+    worktree_path = find_worktree_for_spec(root, spec.id)
+
     if json_out:
         out = spec.to_dict()
         out["close_reason"] = reason
         if git_sha:
             out["git_commit"] = git_sha
+        if worktree_path:
+            out.update(worktree_reminder_fields(worktree_path))
         typer.echo(json.dumps(out))
         return
 
@@ -101,3 +106,5 @@ def cmd_close(
             border_style="dim",
         )
     )
+    if worktree_path:
+        print_worktree_reminder(worktree_path)

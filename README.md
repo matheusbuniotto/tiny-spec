@@ -80,6 +80,7 @@ spec advance 0001 --note "All criteria verified, tests green"   # → implemente
 | `spec new "title"` | Create a spec (interactive or `--ai` for AI draft) |
 | `spec list` | List all specs, filterable by `--status` |
 | `spec show 0001` | Show a spec in full |
+| `spec claim 0001 --worktree` | Claim a spec and create an isolated git worktree |
 | `spec advance 0001` | Move to next state (auto-detects transition) |
 | `spec revert 0001` | Send back to draft |
 | `spec edit 0001` | Open spec in `$EDITOR` |

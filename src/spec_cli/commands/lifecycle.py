@@ -11,10 +11,20 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.rule import Rule
 
+from ..integrations.git import find_worktree_for_spec
 from ..models import STATUS_STYLE, TRANSITIONS, SpecStatus
 from ..state import transition
 from ..storage import find_root, find_spec, list_specs, open_blockers
-from ..ui import console, err_console, error, next_command, not_found, with_help
+from ..ui import (
+    console,
+    err_console,
+    error,
+    next_command,
+    not_found,
+    print_worktree_reminder,
+    with_help,
+    worktree_reminder_fields,
+)
 from .kata import run_katas_for_spec
 
 # Gate states require notes
@@ -193,10 +203,16 @@ def _do_transition(
     except typer.BadParameter as e:
         error(str(e), json_out, {"error": "invalid_transition", "detail": str(e)})
 
+    worktree_path = (
+        find_worktree_for_spec(root, spec.id) if target == SpecStatus.IMPLEMENTED else None
+    )
+
     if json_out:
         out = spec.to_dict()
         if git_sha:
             out["git_commit"] = git_sha
+        if worktree_path:
+            out.update(worktree_reminder_fields(worktree_path))
         help_cmd = next_command(spec.status, spec.id)
         typer.echo(json.dumps(with_help(out, help_cmd)))
         return
@@ -243,6 +259,8 @@ def _do_transition(
         )
     elif target == SpecStatus.IMPLEMENTED:
         console.print(Rule("[bright_green]Spec implemented[/bright_green]", style="bright_green"))
+        if worktree_path:
+            print_worktree_reminder(worktree_path)
 
 
 def cmd_advance(

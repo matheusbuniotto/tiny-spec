@@ -36,7 +36,7 @@ def decisions_dir(root: Path) -> Path:
     return spec_dir(root) / "decisions"
 
 
-def _slugify(text: str) -> str:
+def slugify(text: str) -> str:
     slug = text.lower().strip()
     slug = re.sub(r"[^\w\s-]", "", slug)
     slug = re.sub(r"[\s_]+", "-", slug)
@@ -45,7 +45,7 @@ def _slugify(text: str) -> str:
 
 
 def filename_for(spec_id: str, title: str) -> str:
-    return f"{spec_id}-{_slugify(title)}.md"
+    return f"{spec_id}-{slugify(title)}.md"
 
 
 def _storage_dir(root: Path, template: str) -> Path:
