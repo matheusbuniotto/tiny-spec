@@ -10,7 +10,7 @@ from rich import box
 from rich.table import Table
 
 from ..models import STATUS_STYLE, SpecStatus
-from ..storage import list_specs, open_blockers
+from ..storage import broken_spec_files, list_specs, open_blockers
 from ..ui import console, error, find_root_or_error, truncate_body, with_help
 
 STALE_DAYS = 3
@@ -98,6 +98,8 @@ def cmd_list(
     if parent:
         specs = [s for s in specs if s.parent == parent.zfill(4)]
 
+    broken = broken_spec_files(root) if not specs else []
+
     if json_out:
         spec_dicts = []
         for s in specs:
@@ -106,10 +108,21 @@ def cmd_list(
                 d["body"] = truncate_body(d["body"], s.id)
             spec_dicts.append(d)
         help_cmd = f"spec show {specs[0].id} --json" if specs else 'spec new "<title>" --yes --json'
-        typer.echo(json.dumps(with_help({"count": len(spec_dicts), "specs": spec_dicts}, help_cmd)))
+        payload = with_help({"count": len(spec_dicts), "specs": spec_dicts}, help_cmd)
+        if broken:
+            payload["warnings"] = [
+                f"{len(broken)} spec file(s) exist but failed to load — run `spec doctor` for details"
+            ]
+        typer.echo(json.dumps(payload))
         return
 
     if not specs:
+        if broken:
+            console.print(
+                f"[yellow]⚠ {len(broken)} spec file(s) exist but failed to load[/yellow] "
+                f"[dim](malformed/missing frontmatter — run [cyan]spec doctor[/cyan] for details)[/dim]"
+            )
+            return
         filters = _active_filters(status, stale, assignee, claimable, blocked, parent)
         if stale and filters == "--stale":
             console.print("[dim]No stale specs — everything is moving.[/dim]")
