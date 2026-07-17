@@ -20,45 +20,42 @@ updated_at: '2026-07-17T01:23:14.355232'
 
 ## User Story
 
-> As a **[type of user]**, I want **[goal]** so that **[reason/value]**.
+> As a **human passing the gate on agent-delivered work**, I want **the Human Gate Checklist split into agent-verifiable items (CI, tests, intent-vs-done validation) and human-only items (decisions, product judgment)**, so that **agents pre-verify everything mechanical before parking at the gate and I only spend attention on what genuinely needs a human**.
 
 ## Problem Statement
 
-> What specific problem does this solve? Who is affected and how often?
-> Bad: "Users can't find things." Good: "New users abandon onboarding at step 3 because the next action isn't obvious."
+> Today every Human Gate Checklist item lands on the human, including purely mechanical ones ("run the tests", "check the diff for debug code") that an agent can — and per no-mistakes' model, should — verify itself before handing off. The human's scarce attention gets diluted across items an agent already proved, and the genuinely human calls (does this match intent? is this the right product behavior?) get the same weight as "did pytest pass". no-mistakes solves this with a pipeline where mechanical checks gate automatically and only intent-affecting findings escalate to the human.
 
 ## Proposed Solution
 
-> High-level approach in 2–4 sentences. What will exist after this is implemented that doesn't exist now?
+Checklist items get an optional class marker in the markdown — `[agent]` or `[human]` prefix on the item text (unmarked items default to `human`, the safe direction). `spec gate-check <id> --json` parses the marker and returns items split into `agent_verifiable: [...]` and `human_only: [...]` alongside the existing flat list. skill.md's at-gate workflow tells agents: before advancing to at-gate, run and report every `[agent]` item verbatim in the `--note`; never touch `[human]` items — relay them verbatim to the human. `spec new --ai` template guidance updated so AI-drafted checklists classify items at draft time (test/lint/diff commands → `[agent]`; product behavior, UX judgment, intent-vs-done → `[human]`).
 
 ## Acceptance Criteria
 
-> Order these as a tracer-bullet sequence: AC1 = thinnest end-to-end slice (something demonstrably working, even if minimal). AC2+ = one increment each, never an unrelated requirement bolted on.
-> Each criterion must still be independently testable and binary (pass/fail).
-> Bad: "The UI should be fast." Good: "Search results appear in < 300 ms for datasets up to 10 000 items."
-
-- [ ] **AC1**: [Thinnest end-to-end slice — something demonstrably working]
-- [ ] **AC2**: [One increment on top of AC1]
-- [ ] **AC3**: [One more increment — edge case, error path, or added capability]
+- [ ] **AC1**: a checklist item written as `- [ ] [agent] Run the tests: pytest -q` appears in `spec gate-check <id> --json` under `agent_verifiable`; an item marked `[human]` appears under `human_only`
+- [ ] **AC2**: unmarked items (all existing specs) appear under `human_only` — default is human, nothing silently becomes agent-passable
+- [ ] **AC3**: the existing `gate_checklist_items` flat array is unchanged (markers stripped from display text in all outputs) — no breaking change for current consumers
+- [ ] **AC4**: skill.md's at-gate section instructs agents to pre-verify `[agent]` items and report results verbatim in the advance `--note`, and to relay `[human]` items verbatim without pre-judging
+- [ ] **AC5**: the feature/api/bug templates' Human Gate Checklist sections ship with classified example items, so new specs are born classified
 
 ## Technical Notes
 
-> Architecture decisions, chosen approach, and constraints.
-> Call out: new dependencies, schema changes, breaking changes to existing interfaces, and anything that touches shared infrastructure.
+Parsing lives next to the existing checklist extraction in `src/spec_cli/commands/gate_check.py` (`extract_gate_checklist` / `_parse_items`) — a marker regex on each item, no new files. No frontmatter changes, no state-machine changes: the gate itself still requires a human for at-gate → implemented; this only changes what the human has to personally re-verify. This is the tiny-spec analogue of no-mistakes' split between auto-applied mechanical fixes and human-escalated intent findings — the classification is advisory metadata for the agent workflow, not a new enforcement layer.
 
 ### Dependencies / Blockers
 
-> List specs or external things this depends on. Leave blank if none.
+None.
 
 ### Out of Scope
 
-> What are we explicitly NOT doing in this spec? This prevents scope creep.
-> Example: "Pagination is out of scope — we'll add it in spec 0007."
+- Auto-executing `[agent]` items from tiny-spec itself (agents run them; the CLI only classifies) — no pipeline engine, per backlog's rejected list.
+- Any change to the at-gate → implemented human requirement.
+- `spec verify` integration (configured checks already gate mechanically).
 
 ## Definition of Done
 
 - [ ] All acceptance criteria above are met
-- [ ] Tests written and passing (`<test command>`)
+- [ ] Tests written and passing (`uv run pytest tests/ -q`)
 - [ ] No regressions in related flows
 - [ ] Code reviewed or self-reviewed against project conventions
 - [ ] `.spec/` updated if any follow-on specs are needed
@@ -66,10 +63,9 @@ updated_at: '2026-07-17T01:23:14.355232'
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
-> Every item must be completable in under 5 minutes. Replace placeholders with real commands.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
-- [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
-- [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?
+- [ ] [agent] **Run the tests**: `uv run pytest tests/ -q` — all pass, no skips that weren't there before?
+- [ ] [agent] **Walk the happy path**: create a scratch spec with one `[agent]` and one `[human]` checklist item, run `spec gate-check <id> --json`, confirm the split arrays and that markers are stripped from display text
+- [ ] [agent] **Test the backward-compat case**: `spec gate-check 0005 --json` (unmarked legacy checklist) — all items land in `human_only`, flat `gate_checklist_items` unchanged
+- [ ] [agent] **Check the diff**: `git diff main` — no debug code, no unrelated changes?
+- [ ] [human] **Judgment call**: read skill.md's updated at-gate wording — does the verbatim-relay rule read unambiguous enough that an agent can't rationalize pre-judging a `[human]` item?

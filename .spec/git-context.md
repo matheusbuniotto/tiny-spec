@@ -2,18 +2,19 @@
 
 Last 10 commits:
 
-- `1a8e878c` 2026-07-14 **Matheus Buniotto** — Merge pull request #4 from matheusbuniotto/fix/json-non-interactive
-- `9b7b0b2e` 2026-07-14 **Matheus Buniotto** — chore: keep tasks/ local-only, out of git
-- `560245c6` 2026-07-14 **Matheus Buniotto** — fix: --json implies non-interactive, never prompts
-- `3e3524cb` 2026-07-14 **Matheus Buniotto** — docs: map AI-first engineering improvements into tasks/ + backlog
-- `233e3c03` 2026-07-14 **Matheus Buniotto** — Merge pull request #3 from matheusbuniotto/chore/dashboard-stats-audit
-- `3c361cb5` 2026-07-14 **Matheus Buniotto** — chore: cut dashboard's redundant summary sidebar
-- `9c10924d` 2026-07-14 **Matheus Buniotto** — Merge pull request #2 from matheusbuniotto/feat/living-glossary
-- `a4e80421` 2026-07-14 **Matheus Buniotto** — feat: living glossary in constitution.md
-- `683ffb89` 2026-07-14 **Matheus Buniotto** — Merge pull request #1 from matheusbuniotto/feat/spec-dependencies-and-maps
-- `5195fa14` 2026-07-14 **Matheus Buniotto** — feat: spec dependencies (blocked_by) + maps (parent)
+- `eea236c3` 2026-07-16 **Matheus Buniotto** — spec(0012): create feature — Gate split: agent-verifiable checks vs human-only decisions
+- `80afaace` 2026-07-16 **Matheus Buniotto** — Merge pull request #15 from matheusbuniotto/spec/0005-agentsmd-scaffold-sessionstart-hook
+- `8fbda349` 2026-07-16 **Matheus Buniotto** — spec(0005): at-gate → implemented — AGENTS.md scaffold + SessionStart hook
+- `7eab7729` 2026-07-16 **Matheus Buniotto** — spec(0005): in-progress → at-gate — AGENTS.md scaffold + SessionStart hook
+- `892d8e22` 2026-07-16 **Matheus Buniotto** — feat(0005): scaffold AGENTS.md + opt-in SessionStart hook in init/greenfield
+- `45d1e0c1` 2026-07-16 **Matheus Buniotto** — spec(0005): approved → in-progress — AGENTS.md scaffold + SessionStart hook
+- `c2249aeb` 2026-07-16 **Matheus Buniotto** — Merge pull request #14 from matheusbuniotto/fix/uninitialized-project-silent-empty
+- `11c2693d` 2026-07-16 **Matheus Buniotto** — fix: surface spec files that exist but fail to parse instead of silently dropping them
+- `3c3a914f` 2026-07-16 **Matheus Buniotto** — fix: error clearly when a command runs outside a tiny-spec project
+- `bc999a7c` 2026-07-16 **Matheus Buniotto** — spec(0005): draft → approved — AGENTS.md scaffold + SessionStart hook
 
-Current branch: `chore/dogfood-tiny-spec`
+Current branch: `main`
 
 Remotes:
+  - no-mistakes /Users/monkmode/.no-mistakes/repos/22352d81a32a.git
   - origin https://github.com/matheusbuniotto/tiny-spec.git
