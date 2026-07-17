@@ -26,14 +26,14 @@ gate_notes: 'Fixed AC2 (was untestable — spec init errors on second run before
   generated AGENTS.md content in scratch dir.'
 id: '0005'
 parent: ''
-pr: ''
-status: at-gate
+pr: https://github.com/matheusbuniotto/tiny-spec/pull/15
+status: implemented
 tags:
 - scaffold
 - agents-md
 template: feature
 title: AGENTS.md scaffold + SessionStart hook
-updated_at: '2026-07-17T01:19:08.572248'
+updated_at: '2026-07-17T01:21:19.407924'
 ---
 
 ## User Story
