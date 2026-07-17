@@ -1,23 +1,28 @@
 ---
-assignee: ''
+assignee: claude-fable
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-15T11:16:51.498048'
 gate: ''
-gate_notes: Fixed AC2 (was untestable — spec init errors on second run before any
+gate_notes: 'Fixed AC2 (was untestable — spec init errors on second run before any
   write logic; rewrote as no-overwrite-if-hand-authored) and extended scope to spec
   greenfield, which was the actual source of the Claude-only scaffold gap the problem
   statement described.
+
+
+  ---
+
+  Claimed by claude-fable'
 id: '0005'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - scaffold
 - agents-md
 template: feature
 title: AGENTS.md scaffold + SessionStart hook
-updated_at: '2026-07-17T00:05:32.080639'
+updated_at: '2026-07-17T01:14:45.425202'
 ---
 
 ## User Story
