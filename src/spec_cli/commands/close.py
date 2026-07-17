@@ -13,14 +13,21 @@ from rich.panel import Panel
 
 from ..integrations.git import find_worktree_for_spec
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
-from ..storage import append_log, find_root, find_spec, save_spec
-from ..ui import console, error, not_found, print_worktree_reminder, worktree_reminder_fields
+from ..storage import append_log, find_spec, save_spec
+from ..ui import (
+    console,
+    error,
+    find_root_or_error,
+    not_found,
+    print_worktree_reminder,
+    worktree_reminder_fields,
+)
 
 
 def cmd_close(
     spec_id: str, reason: str, note: Optional[str], yes: bool, json_out: bool, root: Path
 ) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)

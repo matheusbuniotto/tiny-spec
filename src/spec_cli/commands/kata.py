@@ -14,8 +14,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..config import Kata, load_config
-from ..storage import find_root, find_spec
-from ..ui import console, not_found
+from ..storage import find_spec
+from ..ui import console, find_root_or_error, not_found
 
 
 def run_kata(kata: Kata, root: Path) -> dict:
@@ -133,7 +133,7 @@ def _render_results(results: list[dict], spec_id: Optional[str], root: Path) -> 
 
 
 def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     cfg = load_config(root)
 
     if spec_id:

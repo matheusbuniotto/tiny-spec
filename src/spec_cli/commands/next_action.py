@@ -11,8 +11,8 @@ from rich import box
 from rich.panel import Panel
 
 from ..models import CLOSE_REASONS, STATUS_STYLE, SpecStatus
-from ..storage import find_root, list_specs, open_blockers
-from ..ui import console, next_command, with_help
+from ..storage import list_specs, open_blockers
+from ..ui import console, find_root_or_error, next_command, with_help
 
 _PRIORITY = {
     SpecStatus.AT_GATE: 0,
@@ -41,7 +41,7 @@ def _age_days(dt: datetime) -> int:
 
 
 def cmd_next(json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     specs = list_specs(root)
     active = [s for s in specs if s.status not in (SpecStatus.IMPLEMENTED, SpecStatus.CLOSED)]
 

@@ -11,8 +11,8 @@ from rich import box
 from rich.panel import Panel
 
 from ..models import Spec, SpecStatus
-from ..storage import children_of, find_root, list_specs
-from ..ui import console, with_help
+from ..storage import broken_spec_files, children_of, list_specs
+from ..ui import console, find_root_or_error, with_help
 from .gate_check import extract_gate_checklist
 
 STALE_DAYS = 3
@@ -49,7 +49,7 @@ def _find_cycles(by_id: dict[str, Spec]) -> list[list[str]]:
     return cycles
 
 
-def _findings(all_specs: list[Spec]) -> list[dict]:
+def _findings(all_specs: list[Spec], broken: list[tuple[Path, str]]) -> list[dict]:
     by_id: dict[str, Spec] = {}
     dupes: set[str] = set()
     for s in all_specs:
@@ -59,6 +59,18 @@ def _findings(all_specs: list[Spec]) -> list[dict]:
             by_id[s.id] = s
 
     findings: list[dict] = []
+
+    for path, err in broken:
+        findings.append(
+            _finding(
+                "unparseable_spec_file",
+                path.stem,
+                f"{path.name} exists but failed to load ({err.splitlines()[0]}) — "
+                "it won't show up in `spec list` or any other command",
+                "Likely missing/malformed YAML frontmatter — compare against a file "
+                "created with `spec new`, or fix the frontmatter by hand",
+            )
+        )
 
     for dupe_id in sorted(dupes):
         findings.append(
@@ -151,9 +163,10 @@ def _findings(all_specs: list[Spec]) -> list[dict]:
 
 
 def cmd_doctor(json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     all_specs = list_specs(root)
-    findings = _findings(all_specs)
+    broken = broken_spec_files(root)
+    findings = _findings(all_specs, broken)
 
     if json_out:
         typer.echo(

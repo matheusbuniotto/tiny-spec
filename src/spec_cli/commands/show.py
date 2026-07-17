@@ -12,8 +12,8 @@ from rich.rule import Rule
 
 from ..config import effective_gate, load_config
 from ..models import STATUS_STYLE, TRANSITION_LABELS, TRANSITIONS, SpecStatus
-from ..storage import children_of, find_root, find_spec, list_specs, open_blockers
-from ..ui import console, next_command, not_found, with_help
+from ..storage import children_of, find_spec, list_specs, open_blockers
+from ..ui import console, find_root_or_error, next_command, not_found, with_help
 
 _STAGE_ORDER = list(SpecStatus)
 
@@ -53,7 +53,7 @@ def _age_str(dt: datetime) -> str:
 
 
 def cmd_show(spec_id: str, json_out: bool, root: Path, *, full: bool = False) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)

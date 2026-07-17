@@ -132,6 +132,18 @@ def list_specs(root: Path, status: Optional[SpecStatus] = None) -> list[Spec]:
     return specs
 
 
+def broken_spec_files(root: Path) -> list[tuple[Path, str]]:
+    """.md files under specs/decisions that exist but fail to load (usually missing or
+    malformed frontmatter — e.g. hand-written instead of created via `spec new`)."""
+    broken = []
+    for p in _iter_spec_files(root):
+        try:
+            load_spec(p)
+        except Exception as e:
+            broken.append((p, str(e)))
+    return broken
+
+
 def next_id(root: Path) -> str:
     existing = list_specs(root)
     if not existing:

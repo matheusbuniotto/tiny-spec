@@ -14,8 +14,8 @@ from rich.table import Table
 
 from ..config import load_config
 from ..models import STATUS_STYLE, SpecStatus
-from ..storage import find_root, list_specs, spec_dir
-from ..ui import console, truncate_body
+from ..storage import list_specs, spec_dir
+from ..ui import console, find_root_or_error, truncate_body
 
 
 def _age_str(dt: datetime) -> str:
@@ -28,7 +28,7 @@ def _age_str(dt: datetime) -> str:
 
 
 def cmd_export(json_out: bool, active_only: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     cfg = load_config(root)
     specs = list_specs(root)
 

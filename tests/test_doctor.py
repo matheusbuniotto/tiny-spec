@@ -162,3 +162,20 @@ def test_circular_blocked_by_is_flagged(tmp_path, monkeypatch):
 
     findings = json.loads(result.stdout)["findings"]
     assert any(f["type"] == "circular_blocked_by" for f in findings)
+
+
+def test_hand_written_spec_without_frontmatter_is_flagged(tmp_path, monkeypatch):
+    # A file that looks like a spec (plausible markdown, right directory) but was never
+    # created via `spec new` — no YAML frontmatter, so id/title/status are all missing.
+    _init(tmp_path, monkeypatch)
+    orphan = tmp_path / ".spec" / "specs" / "0001-hand-written.md"
+    orphan.write_text("# Hand-written spec\n\n## Status: draft\n\nNo frontmatter here.\n")
+
+    result = runner.invoke(app, ["doctor", "--json"])
+    payload = json.loads(result.stdout)
+
+    assert result.exit_code == 1
+    assert payload["count"] == 1
+    finding = payload["findings"][0]
+    assert finding["type"] == "unparseable_spec_file"
+    assert finding["spec_id"] == "0001-hand-written"

@@ -9,12 +9,11 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..config import load_config
-from ..storage import find_root
-from ..ui import console
+from ..ui import console, find_root_or_error
 
 
 def cmd_config_show(json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     cfg = load_config(root)
 
     if json_out:

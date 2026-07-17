@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import NoReturn
 
 import typer
@@ -11,6 +12,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from .models import SpecStatus
+from .storage import find_root, spec_dir
 
 console = Console()
 err_console = Console(stderr=True)
@@ -60,6 +62,20 @@ def error(msg: str, json_out: bool = False, data: dict | None = None) -> NoRetur
     else:
         err_console.print(f"[red][!][/red] {msg}")
     raise typer.Exit(1)
+
+
+def find_root_or_error(root: Path, json_out: bool) -> Path:
+    """find_root, but errors clearly instead of silently treating an uninitialized
+    directory as an empty project — the ambiguity `spec list`/`spec show`/etc. used
+    to have, mirrored across every read command except `spec new`."""
+    resolved = find_root(root)
+    if not spec_dir(resolved).exists():
+        error(
+            "Not initialized. Run [cyan]spec init[/cyan] first.",
+            json_out,
+            {"error": "not_initialized"},
+        )
+    return resolved
 
 
 def not_found(spec_id: str, json_out: bool) -> NoReturn:

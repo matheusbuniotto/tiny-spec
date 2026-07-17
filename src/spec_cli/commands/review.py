@@ -14,8 +14,8 @@ from rich.rule import Rule
 
 from ..config import load_config
 from ..models import STATUS_STYLE
-from ..storage import find_root, find_spec, spec_dir
-from ..ui import console, error, not_found
+from ..storage import find_spec, spec_dir
+from ..ui import console, error, find_root_or_error, not_found
 
 _REVIEW_PROMPT = """\
 You are a senior tech lead reviewing a spec before approving it.
@@ -126,7 +126,7 @@ def _call_ai(prompt: str, provider: str, model: str, base_url: str) -> str:
 
 
 def cmd_review(spec_id: str, json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)
