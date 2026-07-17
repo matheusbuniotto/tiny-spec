@@ -1,21 +1,21 @@
 ---
-assignee: ''
+assignee: claude-agent
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-17T01:23:14.355107'
 gate: ''
-gate_notes: ''
+gate_notes: Claimed by claude-agent
 id: '0012'
 parent: ''
 pr: ''
-status: approved
+status: in-progress
 tags:
 - gate
 - agents
 - no-mistakes
 template: feature
 title: 'Gate split: agent-verifiable checks vs human-only decisions'
-updated_at: '2026-07-17T01:34:58.345802'
+updated_at: '2026-07-17T01:34:58.497975'
 ---
 
 ## User Story

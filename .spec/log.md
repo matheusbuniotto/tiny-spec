@@ -47,3 +47,4 @@ Append-only record of spec events.
 - **2026-07-17 01:21 UTC** — ✅ GATE PASSED `0005` **AGENTS.md scaffold + SessionStart hook** — PR #https://github.com/matheusbuniotto/tiny-spec/pull/15
 - **2026-07-17 01:23 UTC** — `0012` **Gate split: agent-verifiable checks vs human-only decisions** created (template: feature)
 - **2026-07-17 01:34 UTC** — `0012` **Gate split: agent-verifiable checks vs human-only decisions** → `approved`
+- **2026-07-17 01:34 UTC** — `0012` **Gate split: agent-verifiable checks vs human-only decisions** → `in-progress` — Claimed by claude-agent
