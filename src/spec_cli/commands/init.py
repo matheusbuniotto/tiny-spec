@@ -8,10 +8,11 @@ import typer
 import yaml
 
 from ..integrations.git import git_context_markdown, git_init, is_git_repo
+from ..scaffold.agents_md import write_agents_md, write_sessionstart_hook
 from ..ui import console, error, success
 
 
-def cmd_init(root: Path, author: str, yes: bool, json_out: bool) -> None:
+def cmd_init(root: Path, author: str, yes: bool, json_out: bool, hooks: bool = False) -> None:
     sd = root / ".spec"
 
     if sd.exists():
@@ -102,6 +103,9 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
             "# Git Context\n\n> No commits yet. This file will be enriched as the project grows.\n"
         )
 
+    agents_md_written = write_agents_md(root)
+    hook_written = write_sessionstart_hook(root) if hooks else False
+
     if json_out:
         typer.echo(
             json.dumps(
@@ -111,6 +115,8 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
                     "author": resolved_author,
                     "git_initialized": git_initialized,
                     "git_context": bool(git_context),
+                    "agents_md": agents_md_written,
+                    "sessionstart_hook": hook_written,
                 }
             )
         )
@@ -120,6 +126,12 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
             git_line = "\n  [dim]Git:[/dim]  [green]git init[/green] [dim]done[/dim]"
         elif git_was_repo and git_context:
             git_line = "\n  [dim]Git:[/dim]  [green]context captured[/green] [dim]→ .spec/git-context.md[/dim]"
+        if agents_md_written:
+            git_line += "\n  [dim]Agents:[/dim] [green]AGENTS.md[/green] [dim]written[/dim]"
+        else:
+            git_line += "\n  [dim]Agents:[/dim] [yellow]AGENTS.md exists — left untouched[/yellow]"
+        if hook_written:
+            git_line += "\n  [dim]Hook:[/dim]  [green]SessionStart[/green] [dim]→ .claude/settings.json[/dim]"
         success(
             "tiny-spec",
             (

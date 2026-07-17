@@ -12,6 +12,7 @@ from rich.tree import Tree
 from ..config import Config, save_config
 from ..integrations.git import git_commit_spec, git_init
 from ..scaffold.agents import AGENTS
+from ..scaffold.agents_md import write_agents_md, write_sessionstart_hook
 from ..scaffold.claude_md import generate_claude_md
 from ..scaffold.project_types import scaffold_project
 from ..ui import console, error, success
@@ -26,6 +27,7 @@ def cmd_greenfield(
     spec_only: bool,
     yes: bool,
     json_out: bool,
+    hooks: bool = False,
 ) -> None:
     root = Path(folder).resolve()
 
@@ -132,6 +134,11 @@ def cmd_greenfield(
         "# Git Context\n\n> No commits yet. This file will be enriched as the project grows.\n"
     )
     created.append(".spec/git-context.md")
+
+    if write_agents_md(root):
+        created.append("AGENTS.md")
+    if hooks and write_sessionstart_hook(root):
+        created.append(".claude/settings.json")
 
     if not spec_only:
         # 2. Write CLAUDE.md
