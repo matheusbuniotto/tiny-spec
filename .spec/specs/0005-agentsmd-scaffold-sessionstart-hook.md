@@ -12,17 +12,28 @@ gate_notes: 'Fixed AC2 (was untestable — spec init errors on second run before
 
   ---
 
-  Claimed by claude-fable'
+  Claimed by claude-fable
+
+
+  ---
+
+  Implemented AGENTS.md scaffold in both cmd_init and cmd_greenfield via new src/spec_cli/scaffold/agents_md.py.
+  Content generated from packaged SKILL.md sections (Bootstrap, JSON conventions,
+  Status lifecycle, Gate rule) — single source of truth, no parallel doc. AC3: write_agents_md
+  returns False and leaves file untouched if AGENTS.md exists. AC4: SessionStart hook
+  only written with --hooks flag, skips existing .claude/settings.json. Tests: 86
+  pass (5 new in tests/test_agents_md_scaffold.py covering all 4 ACs). Manually verified
+  generated AGENTS.md content in scratch dir.'
 id: '0005'
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - scaffold
 - agents-md
 template: feature
 title: AGENTS.md scaffold + SessionStart hook
-updated_at: '2026-07-17T01:14:45.425202'
+updated_at: '2026-07-17T01:19:08.572248'
 ---
 
 ## User Story
