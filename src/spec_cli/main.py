@@ -69,15 +69,18 @@ def init(
     spec_only: bool = typer.Option(
         False, "--spec-only", help="Only .spec/, skip agents + CLAUDE.md"
     ),
+    hooks: bool = typer.Option(
+        False, "--hooks", help="Also write a Claude Code SessionStart hook (spec next --json)"
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Init tiny-spec. Pass a folder to scaffold a greenfield project."""
     if folder:
-        cmd_greenfield(folder, project_type, author, spec_only, yes, json_out)
+        cmd_greenfield(folder, project_type, author, spec_only, yes, json_out, hooks)
     else:
-        cmd_init(root, author, yes, json_out)
+        cmd_init(root, author, yes, json_out, hooks)
 
 
 @app.command(rich_help_panel="Lifecycle")
