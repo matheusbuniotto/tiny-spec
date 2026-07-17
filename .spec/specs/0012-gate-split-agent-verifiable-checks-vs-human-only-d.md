@@ -1,21 +1,21 @@
 ---
-assignee: ''
+assignee: claude-agent
 author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-17T01:23:14.355107'
 gate: ''
-gate_notes: ''
+gate_notes: Claimed by claude-agent
 id: '0012'
 parent: ''
 pr: ''
-status: draft
+status: in-progress
 tags:
 - gate
 - agents
 - no-mistakes
 template: feature
 title: 'Gate split: agent-verifiable checks vs human-only decisions'
-updated_at: '2026-07-17T01:23:14.355232'
+updated_at: '2026-07-17T01:34:58.497975'
 ---
 
 ## User Story
@@ -28,19 +28,19 @@ updated_at: '2026-07-17T01:23:14.355232'
 
 ## Proposed Solution
 
-Checklist items get an optional class marker in the markdown — `[agent]` or `[human]` prefix on the item text (unmarked items default to `human`, the safe direction). `spec gate-check <id> --json` parses the marker and returns items split into `agent_verifiable: [...]` and `human_only: [...]` alongside the existing flat list. skill.md's at-gate workflow tells agents: before advancing to at-gate, run and report every `[agent]` item verbatim in the `--note`; never touch `[human]` items — relay them verbatim to the human. `spec new --ai` template guidance updated so AI-drafted checklists classify items at draft time (test/lint/diff commands → `[agent]`; product behavior, UX judgment, intent-vs-done → `[human]`).
+Checklist items get an optional class marker in the markdown — `[agent]` or `[human]` prefix on the item text (unmarked items default to `human`, the safe direction). Marker grammar: only lowercase `[agent]` or `[human]` at the very start of the item text (after the `- [ ]` checkbox) counts as a marker; anything else — different case (`[Agent]`), unknown tags (`[bot]`, `[ci]`), a bracket mid-text, or item text that legitimately starts with another bracket — is plain text, and the item defaults to `human_only` with its text untouched. `spec gate-check <id> --json` parses the marker and returns items split into `agent_verifiable: [...]` and `human_only: [...]` alongside the existing flat list. skill.md's at-gate workflow tells agents: before advancing to at-gate, run and report every `[agent]` item verbatim in the `--note`; never touch `[human]` items — relay them verbatim to the human. `spec new --ai` template guidance updated so AI-drafted checklists classify items at draft time (test/lint/diff commands → `[agent]`; product behavior, UX judgment, intent-vs-done → `[human]`).
 
 ## Acceptance Criteria
 
 - [ ] **AC1**: a checklist item written as `- [ ] [agent] Run the tests: pytest -q` appears in `spec gate-check <id> --json` under `agent_verifiable`; an item marked `[human]` appears under `human_only`
 - [ ] **AC2**: unmarked items (all existing specs) appear under `human_only` — default is human, nothing silently becomes agent-passable
-- [ ] **AC3**: the existing `gate_checklist_items` flat array is unchanged (markers stripped from display text in all outputs) — no breaking change for current consumers
-- [ ] **AC4**: skill.md's at-gate section instructs agents to pre-verify `[agent]` items and report results verbatim in the advance `--note`, and to relay `[human]` items verbatim without pre-judging
-- [ ] **AC5**: the feature/api/bug templates' Human Gate Checklist sections ship with classified example items, so new specs are born classified
+- [ ] **AC3**: the existing `gate_checklist_items` flat array keeps its shape with markers stripped from item text, on exactly these three surfaces: (a) the `gate_checklist_items` JSON array, (b) the `spec gate-check` human-readable panel, (c) the at-gate transition panel printed by `spec advance` (rendered via `lifecycle.py`). The raw `gate_checklist` JSON string stays the verbatim markdown source, markers included — no breaking change for current consumers
+- [ ] **AC4**: skill.md's at-gate section (both copies, kept in sync: `skill.md` at repo root and `src/spec_cli/SKILL.md`) instructs agents to pre-verify `[agent]` items and report results verbatim in the advance `--note`, and to relay `[human]` items verbatim without pre-judging
+- [ ] **AC5**: the feature/api/bug templates' Human Gate Checklist sections each ship with at least one `[agent]` and at least one `[human]` example item, so new specs are born classified. The other templates carrying a checklist (adr, data-pipeline, experiment, map) are excluded on purpose — their checklists are judgment-heavy and the unmarked→`human_only` default already does the right thing there
 
 ## Technical Notes
 
-Parsing lives next to the existing checklist extraction in `src/spec_cli/commands/gate_check.py` (`extract_gate_checklist` / `_parse_items`) — a marker regex on each item, no new files. No frontmatter changes, no state-machine changes: the gate itself still requires a human for at-gate → implemented; this only changes what the human has to personally re-verify. This is the tiny-spec analogue of no-mistakes' split between auto-applied mechanical fixes and human-escalated intent findings — the classification is advisory metadata for the agent workflow, not a new enforcement layer.
+Parsing lives next to the existing checklist extraction in `src/spec_cli/commands/gate_check.py` (`extract_gate_checklist` / `_parse_checklist_items`) — a marker regex on each item, no new files. Beware: `lifecycle.py` carries a duplicate `_extract_gate_checklist` used by the at-gate transition panel (`lifecycle.py:237`) — consolidate it onto gate_check's extractor (or share the marker-stripping helper) so AC3's surface (c) is covered; touching only `gate_check.py` is not done. No frontmatter changes, no state-machine changes: the gate itself still requires a human for at-gate → implemented; this only changes what the human has to personally re-verify. This is the tiny-spec analogue of no-mistakes' split between auto-applied mechanical fixes and human-escalated intent findings — the classification is advisory metadata for the agent workflow, not a new enforcement layer. Trade-off accepted knowingly: marking an item `[agent]` shifts trust to the agent's self-report in the `--note`; spot-checking `[agent]` items remains the human's prerogative at the gate. The human-readable panels deliberately stay flat (classification surfaces only in `--json`) — minimal scope; a panel grouping can be a follow-on if wanted.
 
 ### Dependencies / Blockers
 

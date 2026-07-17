@@ -123,10 +123,11 @@ On hit  : 429 Too Many Requests — retry after X-RateLimit-Reset
 ## Human Gate Checklist
 
 > When the AI says "done", the human verifies each item before passing the gate.
+> Mark mechanical items `[agent]` (an agent pre-verifies them before the gate) and judgment calls `[human]`. Unmarked items default to human.
 
-- [ ] **Hit every endpoint**: use `curl` or API client — request/response shapes match the spec exactly?
-- [ ] **Test authentication**: call without a token → expect `401`; call with invalid token → expect `401`?
-- [ ] **Test validation errors**: send a request missing required fields → correct `400` response with meaningful error?
-- [ ] **Test a conflict / edge case**: [describe the specific scenario for this API]
-- [ ] **Check pagination**: if a list endpoint exists, request page 2 — does `next_cursor` / `total` work correctly?
-- [ ] **Read the diff**: `git diff main` — no hardcoded secrets, no debug routes, no commented-out endpoints?
+- [ ] [agent] **Hit every endpoint**: use `curl` or API client — request/response shapes match the spec exactly?
+- [ ] [agent] **Test authentication**: call without a token → expect `401`; call with invalid token → expect `401`?
+- [ ] [agent] **Test validation errors**: send a request missing required fields → correct `400` response with meaningful error?
+- [ ] [agent] **Test a conflict / edge case**: [describe the specific scenario for this API]
+- [ ] [agent] **Check pagination**: if a list endpoint exists, request page 2 — does `next_cursor` / `total` work correctly?
+- [ ] [human] **Read the diff**: `git diff main` — no hardcoded secrets, no debug routes, no commented-out endpoints — and do the API shapes match what was actually intended?

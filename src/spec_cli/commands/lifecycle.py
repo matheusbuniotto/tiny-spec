@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +16,6 @@ from ..state import transition
 from ..storage import find_spec, list_specs, open_blockers
 from ..ui import (
     console,
-    err_console,
     error,
     find_root_or_error,
     next_command,
@@ -26,6 +24,7 @@ from ..ui import (
     with_help,
     worktree_reminder_fields,
 )
+from .gate_check import extract_gate_checklist, strip_class_markers
 from .kata import run_katas_for_spec
 
 # Gate states require notes
@@ -34,21 +33,6 @@ _NOTES_PROMPTS = {
     SpecStatus.AT_GATE: "Gate notes (what needs human review?): ",
     SpecStatus.IMPLEMENTED: "Approval notes (what was verified?): ",
 }
-
-_GATE_CHECKLIST_RE = re.compile(
-    r"## Human Gate Checklist\s*\n(.*?)(?=\n## |\Z)",
-    re.DOTALL,
-)
-
-
-def _extract_gate_checklist(body: str) -> str:
-    """Pull the Human Gate Checklist section from the spec body."""
-    m = _GATE_CHECKLIST_RE.search(body)
-    if not m:
-        return ""
-    raw = m.group(1).strip()
-    lines = [l for l in raw.splitlines() if l.strip() and not l.strip().startswith(">")]
-    return "\n".join(lines)
 
 
 def _resolve(spec_id: str, root: Path, json_out: bool):
@@ -105,7 +89,7 @@ def _check_drift(spec, root: Path) -> bool:
     p = Path(spec.file_path)
     if not p.exists():
         return False
-    from datetime import datetime, timezone
+    from datetime import datetime
 
     file_mtime = datetime.utcfromtimestamp(p.stat().st_mtime)
     delta = (file_mtime - spec.updated_at).total_seconds()
@@ -234,11 +218,14 @@ def _do_transition(
         )
     )
     if target == SpecStatus.AT_GATE:
-        checklist = _extract_gate_checklist(spec.body)
+        checklist = extract_gate_checklist(spec.body)
         if checklist:
             console.print(
                 Panel(
-                    Markdown(f"**Before you pass this gate, verify each item:**\n\n{checklist}"),
+                    Markdown(
+                        "**Before you pass this gate, verify each item:**\n\n"
+                        f"{strip_class_markers(checklist)}"
+                    ),
                     title="[bold magenta]⏸ Human Gate Checklist[/bold magenta]",
                     box=box.ROUNDED,
                     border_style="magenta",

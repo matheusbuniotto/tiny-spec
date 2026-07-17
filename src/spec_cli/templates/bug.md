@@ -56,9 +56,10 @@
 ## Human Gate Checklist
 
 > When the AI says "fixed", the human verifies each item before passing the gate.
+> Mark mechanical items `[agent]` (an agent pre-verifies them before the gate) and judgment calls `[human]`. Unmarked items default to human.
 
-- [ ] **Reproduce the original bug first**: follow repro steps above on the unfixed version — does it still fail? (establishes baseline)
-- [ ] **Apply fix and retest**: same steps on the fixed version — bug is gone?
-- [ ] **Run the test suite**: `<test command>` — all pass, including the new regression test?
-- [ ] **Check one related flow**: [describe a nearby scenario that should still work — prevents silent regressions]
-- [ ] **Read the diff**: `git diff main` — fix is minimal, no unrelated changes, no debug statements?
+- [ ] [agent] **Reproduce the original bug first**: follow repro steps above on the unfixed version — does it still fail? (establishes baseline)
+- [ ] [agent] **Apply fix and retest**: same steps on the fixed version — bug is gone?
+- [ ] [agent] **Run the test suite**: `<test command>` — all pass, including the new regression test?
+- [ ] [agent] **Check one related flow**: [describe a nearby scenario that should still work — prevents silent regressions]
+- [ ] [human] **Read the diff**: `git diff main` — fix is minimal, no unrelated changes, no debug statements — and is this the right fix, not just a symptom patch?

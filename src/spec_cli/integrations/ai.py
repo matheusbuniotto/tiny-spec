@@ -55,6 +55,7 @@ This section is what the human uses to decide pass/fail. It must be specific to 
 - The edge case must be specific — not "try an invalid input" but "send an email without @domain — expect 422".
 - Every item must be completable in under 5 minutes.
 - If the test command is unknown, write a reasonable default and append `# VERIFY`.
+- Classify every item with a lowercase marker at the start of the item text: `[agent]` for mechanical checks an agent can run and prove (test/lint/diff commands, deterministic curl calls), `[human]` for judgment calls (product behavior, UX quality, intent-vs-done). When in doubt, use `[human]` — unmarked items default to human anyway.
 
 **Glossary — shared vocabulary:**
 - Reuse the project's existing terms below exactly as defined. Don't invent a new name for something already named.
