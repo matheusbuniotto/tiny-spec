@@ -180,11 +180,17 @@ spec list --claimable --json                                 # (optional) browse
 spec claim <id> --yes --json                                 # 2. atomic claim: assert approved, assign, start
 # ... implement the work ...
 spec verify --json                                            # 3. checks must pass before gating
-spec advance <id> --note "<delivery summary>" --yes --json  # 4. DELIVERY SIGNAL: in-progress → at-gate
+spec gate-check <id> --json                                   # 4. read the split checklist BEFORE advancing
+spec advance <id> --note "<delivery summary>" --yes --json  # 5. DELIVERY SIGNAL: in-progress → at-gate
 # The --note is the delivery receipt the human will read. Be specific:
 # "Implemented X. Tests: 12 pass. Edge case Y handled in file.py:42."
 # DO NOT advance past at-gate — that gate belongs to the human.
 ```
+
+`spec gate-check <id> --json` returns the checklist split into two arrays. Handle them differently:
+
+- `agent_verifiable` (items marked `[agent]`): run **every one** of these yourself before advancing, and report each item's result **verbatim** in the `--note` — the item text plus what happened ("Run the tests: 86 passed, 0 skipped"). An `[agent]` item you didn't actually run must not be reported as passing.
+- `human_only` (items marked `[human]`, plus every unmarked item): these are the human's decisions. **Never** run, judge, summarize, or pre-answer them — relay them to the human **verbatim**. Writing "this looks fine" next to a `[human]` item is pre-judging it; don't.
 
 ## Workflow: "what's in flight / what should I do next?"
 

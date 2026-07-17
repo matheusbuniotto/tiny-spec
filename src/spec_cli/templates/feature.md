@@ -47,9 +47,10 @@
 
 > When the AI says "done", the human verifies each item before passing the gate.
 > Every item must be completable in under 5 minutes. Replace placeholders with real commands.
+> Mark mechanical items `[agent]` (an agent pre-verifies them before the gate) and judgment calls `[human]`. Unmarked items default to human.
 
-- [ ] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
-- [ ] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
-- [ ] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
-- [ ] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
-- [ ] **Re-read acceptance criteria**: each AC above is demonstrably met?
+- [ ] [agent] **Run the tests**: `<test command>` — all pass, no skips that weren't there before?
+- [ ] [agent] **Walk the happy path**: [describe exact steps — what to click/call/send and what to expect]
+- [ ] [agent] **Test the failure case**: [describe one edge case or error path — what input, what expected response]
+- [ ] [agent] **Check the diff**: `git diff main` — no debug code, no unrelated changes, no hardcoded secrets?
+- [ ] [human] **Re-read acceptance criteria**: each AC above is demonstrably met — and is this actually the behavior the spec intended?
