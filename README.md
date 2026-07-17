@@ -242,9 +242,12 @@ my-app/
   .claude/
     agents/        # pre-wired AI agent definitions
   CLAUDE.md        # project context for Claude Code
+  AGENTS.md        # tool-agnostic agent instructions (Codex, Cursor, Copilot, ...)
 ```
 
 Project types: `blank`, `python-api`, `typescript-web`, `cli-tool`
+
+Both `spec init` and greenfield `spec init <folder>` write `AGENTS.md` (skipped if one already exists — never overwrites a hand-authored one). Pass `--hooks` to also install a Claude Code `SessionStart` hook that runs `spec next --json` at the start of every session.
 
 ---
 
