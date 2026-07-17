@@ -4,18 +4,38 @@ author: Matheus Buniotto
 blocked_by: []
 created_at: '2026-07-17T01:23:14.355107'
 gate: ''
-gate_notes: Claimed by claude-agent
+gate_notes: 'Claimed by claude-agent
+
+
+  ---
+
+  Implemented gate checklist split (PR https://github.com/matheusbuniotto/tiny-spec/pull/16).
+  [agent]/[human] markers parsed in gate_check.py (classify_checklist_item, strip_class_markers,
+  _split_checklist_items); gate-check --json adds agent_verifiable + human_only arrays;
+  markers stripped on all 3 display surfaces, raw gate_checklist verbatim; lifecycle.py''s
+  duplicate extractor consolidated onto gate_check''s; skill.md + SKILL.md at-gate
+  wording (pre-verify [agent], relay [human] verbatim); feature/api/bug templates
+  + ai.py prompt classified. Tests: 99/99 pass, 13 new in tests/test_gate_split.py
+  (AC1-AC5 + grammar edge cases). ruff clean on touched files. Pre-verified [agent]
+  gate items: ''Run the tests: uv run pytest tests/ -q'' -> 99 passed, 0 new skips.
+  ''Walk the happy path'' -> scratch spec with one [agent] + one [human] item returned
+  correct split arrays, markers stripped from display text. ''Test the backward-compat
+  case: spec gate-check 0005 --json'' -> all 5 items in human_only, agent_verifiable
+  [], flat gate_checklist_items unchanged. ''Check the diff: git diff main'' -> 9
+  files, no debug code, no unrelated changes. [human] item left for you verbatim:
+  read skill.md''s updated at-gate wording — does the verbatim-relay rule read unambiguous
+  enough that an agent can''t rationalize pre-judging a [human] item?'
 id: '0012'
 parent: ''
 pr: ''
-status: in-progress
+status: at-gate
 tags:
 - gate
 - agents
 - no-mistakes
 template: feature
 title: 'Gate split: agent-verifiable checks vs human-only decisions'
-updated_at: '2026-07-17T01:34:58.497975'
+updated_at: '2026-07-17T01:44:11.100180'
 ---
 
 ## User Story
