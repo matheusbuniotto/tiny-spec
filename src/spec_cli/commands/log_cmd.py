@@ -1,4 +1,5 @@
 """spec log — show and filter the append-only event log."""
+
 from __future__ import annotations
 
 import json
@@ -8,16 +9,14 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from rich import box
 from rich.panel import Panel
 from rich.text import Text
-from rich import box
 
-from ..storage import find_root, spec_dir
-from ..ui import console, error
+from ..storage import spec_dir
+from ..ui import console, error, find_root_or_error
 
-_LOG_ENTRY_RE = re.compile(
-    r"^- \*\*(?P<ts>[^*]+)\*\* — (?P<body>.+)$"
-)
+_LOG_ENTRY_RE = re.compile(r"^- \*\*(?P<ts>[^*]+)\*\* — (?P<body>.+)$")
 
 _STATUS_COLORS = {
     "GATE OPENED": "magenta",
@@ -66,7 +65,7 @@ def _render_entry(entry: dict, query: Optional[str] = None) -> Text:
                 t.append(body[pos:], style=color)
                 break
             t.append(body[pos:idx], style=color)
-            t.append(body[idx:idx + len(query)], style="bold yellow")
+            t.append(body[idx : idx + len(query)], style="bold yellow")
             pos = idx + len(query)
     else:
         t.append(body, style=color)
@@ -81,7 +80,7 @@ def cmd_log(
     json_out: bool,
     root: Path,
 ) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     log_path = spec_dir(root) / "log.md"
 
     if not log_path.exists():
@@ -119,20 +118,26 @@ def cmd_log(
     if spec_id:
         filter_desc += f"  [dim]spec:[/dim] [bold]{spec_id}[/bold]"
     if query:
-        filter_desc += f"  [dim]search:[/dim] [yellow]\"{query}\"[/yellow]"
+        filter_desc += f'  [dim]search:[/dim] [yellow]"{query}"[/yellow]'
 
     console.print()
-    console.print(Panel(
-        f"[bold cyan]◈ spec log[/bold cyan]"
-        f"  [dim]last {len(entries)} entries[/dim]{filter_desc}",
-        box=box.ROUNDED, border_style="bright_blue", padding=(0, 2),
-    ))
+    console.print(
+        Panel(
+            f"[bold cyan]◈ spec log[/bold cyan]"
+            f"  [dim]last {len(entries)} entries[/dim]{filter_desc}",
+            box=box.ROUNDED,
+            border_style="bright_blue",
+            padding=(0, 2),
+        )
+    )
     console.print()
 
     for entry in entries:
         console.print(_render_entry(entry, query))
 
     console.print()
-    console.print(f"  [dim]{len(entries)} entr{'y' if len(entries) == 1 else 'ies'}[/dim]  "
-                  f"[dim]full log → .spec/log.md[/dim]")
+    console.print(
+        f"  [dim]{len(entries)} entr{'y' if len(entries) == 1 else 'ies'}[/dim]  "
+        f"[dim]full log → .spec/log.md[/dim]"
+    )
     console.print()

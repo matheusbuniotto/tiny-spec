@@ -8,8 +8,8 @@ from pathlib import Path
 
 import typer
 
-from ..storage import find_root, find_spec
-from ..ui import not_found
+from ..storage import find_spec
+from ..ui import find_root_or_error, not_found
 
 
 def _section(body: str, heading: str) -> str:
@@ -63,7 +63,7 @@ def _build_risk(spec) -> str:
 
 
 def cmd_pr_body(spec_id: str, json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)

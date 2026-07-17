@@ -1,4 +1,5 @@
 """Pipeline health stats — one object for CI, bots, and morning checks."""
+
 from __future__ import annotations
 
 import json
@@ -7,14 +8,14 @@ from pathlib import Path
 from statistics import mean
 
 import typer
-from rich.panel import Panel
-from rich.table import Table
-from rich.rule import Rule
 from rich import box
+from rich.panel import Panel
+from rich.rule import Rule
+from rich.table import Table
 
-from ..models import SpecStatus, STATUS_STYLE
-from ..storage import list_specs, find_root
-from ..ui import console
+from ..models import STATUS_STYLE, SpecStatus
+from ..storage import list_specs
+from ..ui import console, find_root_or_error
 
 STALE_DAYS = 3
 BAR_WIDTH = 20
@@ -35,7 +36,7 @@ def _bar(value: int, total: int, color: str, width: int = BAR_WIDTH) -> str:
 
 
 def cmd_stats(json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     specs = list_specs(root)
 
     by_status = {s: [sp for sp in specs if sp.status == s] for s in SpecStatus}
@@ -74,12 +75,16 @@ def cmd_stats(json_out: bool, root: Path) -> None:
     health_color = {"green": "bright_green", "yellow": "yellow", "red": "red"}[payload["health"]]
     health_icon = {"green": "●", "yellow": "◐", "red": "●"}[payload["health"]]
     console.print()
-    console.print(Panel(
-        f"[bold cyan]◈ spec stats[/bold cyan]  "
-        f"[{health_color}]{health_icon} {payload['health'].upper()}[/{health_color}]  "
-        f"[dim]{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}[/dim]",
-        box=box.ROUNDED, border_style="bright_blue", padding=(0, 2),
-    ))
+    console.print(
+        Panel(
+            f"[bold cyan]◈ spec stats[/bold cyan]  "
+            f"[{health_color}]{health_icon} {payload['health'].upper()}[/{health_color}]  "
+            f"[dim]{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}[/dim]",
+            box=box.ROUNDED,
+            border_style="bright_blue",
+            padding=(0, 2),
+        )
+    )
     console.print()
 
     # ── Status breakdown ──────────────────────────────────────────────────────
@@ -115,17 +120,24 @@ def cmd_stats(json_out: bool, root: Path) -> None:
     m.add_row("Active", str(len(active)), "not implemented or closed")
 
     stale_style = "red" if stale else "bright_green"
-    m.add_row("Stale", f"[{stale_style}]{len(stale)}[/{stale_style}]",
-              f">{STALE_DAYS}d without movement")
+    m.add_row(
+        "Stale", f"[{stale_style}]{len(stale)}[/{stale_style}]", f">{STALE_DAYS}d without movement"
+    )
 
     gate_style = "magenta" if at_gate else "bright_green"
-    m.add_row("Blocked at gate", f"[{gate_style}]{len(at_gate)}[/{gate_style}]",
-              "waiting for human review")
+    m.add_row(
+        "Blocked at gate",
+        f"[{gate_style}]{len(at_gate)}[/{gate_style}]",
+        "waiting for human review",
+    )
 
     if avg_cycle is not None:
         cycle_color = "bright_green" if avg_cycle < 7 else ("yellow" if avg_cycle < 14 else "red")
-        m.add_row("Avg cycle", f"[{cycle_color}]{avg_cycle}d[/{cycle_color}]",
-                  f"draft→implemented ({len(implemented)} specs)")
+        m.add_row(
+            "Avg cycle",
+            f"[{cycle_color}]{avg_cycle}d[/{cycle_color}]",
+            f"draft→implemented ({len(implemented)} specs)",
+        )
     else:
         m.add_row("Avg cycle", "[dim]—[/dim]", "no implemented specs yet")
 
@@ -139,17 +151,27 @@ def cmd_stats(json_out: bool, root: Path) -> None:
         alerts.append(f"[red]⚠ {len(stale)} stale:[/red] {ids}  [dim]→ spec list --stale[/dim]")
     if at_gate:
         ids = " ".join(f"[bold]{s.id}[/bold]" for s in at_gate)
-        alerts.append(f"[magenta]⏸ {len(at_gate)} at gate:[/magenta] {ids}  [dim]→ spec gate-check <id>[/dim]")
+        alerts.append(
+            f"[magenta]⏸ {len(at_gate)} at gate:[/magenta] {ids}  [dim]→ spec gate-check <id>[/dim]"
+        )
 
     if alerts:
-        console.print(Panel(
-            "\n".join(alerts),
-            title="[bold yellow]Attention needed[/bold yellow]",
-            box=box.ROUNDED, border_style="yellow", padding=(0, 2),
-        ))
+        console.print(
+            Panel(
+                "\n".join(alerts),
+                title="[bold yellow]Attention needed[/bold yellow]",
+                box=box.ROUNDED,
+                border_style="yellow",
+                padding=(0, 2),
+            )
+        )
     else:
-        console.print(Panel(
-            "[bright_green]✓ No blockers — pipeline is clean.[/bright_green]",
-            box=box.ROUNDED, border_style="bright_green", padding=(0, 2),
-        ))
+        console.print(
+            Panel(
+                "[bright_green]✓ No blockers — pipeline is clean.[/bright_green]",
+                box=box.ROUNDED,
+                border_style="bright_green",
+                padding=(0, 2),
+            )
+        )
     console.print()

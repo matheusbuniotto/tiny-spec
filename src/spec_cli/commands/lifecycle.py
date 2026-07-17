@@ -14,11 +14,12 @@ from rich.rule import Rule
 from ..integrations.git import find_worktree_for_spec
 from ..models import STATUS_STYLE, TRANSITIONS, SpecStatus
 from ..state import transition
-from ..storage import find_root, find_spec, list_specs, open_blockers
+from ..storage import find_spec, list_specs, open_blockers
 from ..ui import (
     console,
     err_console,
     error,
+    find_root_or_error,
     next_command,
     not_found,
     print_worktree_reminder,
@@ -124,7 +125,7 @@ def _do_transition(
 ) -> None:
     from ..config import effective_gate, load_config
 
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = _resolve(spec_id, root, json_out)
     old_status = spec.status
     gate_mode = effective_gate(spec, load_config(root))
@@ -273,7 +274,7 @@ def cmd_advance(
     skip_kata_reason: str = "",
     pr: Optional[str] = None,
 ) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = _resolve(spec_id, root, json_out)
     next_states = TRANSITIONS[spec.status]
     if not next_states:

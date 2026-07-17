@@ -11,8 +11,8 @@ from rich import box
 from rich.panel import Panel
 
 from ..models import Spec, SpecStatus
-from ..storage import children_of, find_root, list_specs
-from ..ui import console, with_help
+from ..storage import children_of, list_specs
+from ..ui import console, find_root_or_error, with_help
 from .gate_check import extract_gate_checklist
 
 STALE_DAYS = 3
@@ -151,7 +151,7 @@ def _findings(all_specs: list[Spec]) -> list[dict]:
 
 
 def cmd_doctor(json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     all_specs = list_specs(root)
     findings = _findings(all_specs)
 

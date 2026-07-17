@@ -12,12 +12,12 @@ from rich import box
 from rich.panel import Panel
 
 from ..models import STATUS_STYLE
-from ..storage import append_log, find_root, find_spec, save_spec
-from ..ui import console, not_found
+from ..storage import append_log, find_spec, save_spec
+from ..ui import console, find_root_or_error, not_found
 
 
 def cmd_assign(spec_id: str, assignee: str, json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)

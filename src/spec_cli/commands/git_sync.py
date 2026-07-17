@@ -1,4 +1,5 @@
 """Manual git sync command — commit all .spec/ changes."""
+
 from __future__ import annotations
 
 import json
@@ -7,9 +8,13 @@ from typing import Optional
 
 import typer
 
-from ..integrations.git import is_git_repo, git_commit_spec, git_status_summary, git_context_markdown
-from ..storage import find_root
-from ..ui import console, error
+from ..integrations.git import (
+    git_commit_spec,
+    git_context_markdown,
+    git_status_summary,
+    is_git_repo,
+)
+from ..ui import console, error, find_root_or_error
 
 
 def _refresh_git_context(root: Path) -> bool:
@@ -27,12 +32,13 @@ def _refresh_git_context(root: Path) -> bool:
 
 
 def cmd_sync(message: Optional[str], json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
 
     if not is_git_repo(root):
         error(
             "Not a git repository. Run [cyan]git init[/cyan] first.",
-            json_out, {"error": "not_git_repo"},
+            json_out,
+            {"error": "not_git_repo"},
         )
 
     # Refresh git context before checking status
@@ -55,20 +61,24 @@ def cmd_sync(message: Optional[str], json_out: bool, root: Path) -> None:
         if sha:
             console.print(f"[green]✓[/green] Committed .spec/ changes — [green]{sha}[/green]")
         else:
-            console.print("[yellow]⚠ Nothing was committed (changes may already be staged elsewhere).[/yellow]")
+            console.print(
+                "[yellow]⚠ Nothing was committed (changes may already be staged elsewhere).[/yellow]"
+            )
 
 
 def cmd_git_context(json_out: bool, root: Path) -> None:
     """Refresh .spec/git-context.md and display a summary."""
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
 
     if not is_git_repo(root):
         error(
             "Not a git repository. Run [cyan]git init[/cyan] first.",
-            json_out, {"error": "not_git_repo"},
+            json_out,
+            {"error": "not_git_repo"},
         )
 
     from ..integrations.git import git_recent_commits
+
     commits = git_recent_commits(root, n=10)
 
     ctx_path = root / ".spec" / "git-context.md"
@@ -84,8 +94,9 @@ def cmd_git_context(json_out: bool, root: Path) -> None:
         console.print("[dim]No commits found in this repository yet.[/dim]")
         return
 
-    from rich.table import Table
     from rich import box as rbox
+    from rich.table import Table
+
     table = Table(box=rbox.SIMPLE, show_header=True, header_style="bold cyan")
     table.add_column("SHA", style="green", no_wrap=True)
     table.add_column("Date", style="dim", no_wrap=True)

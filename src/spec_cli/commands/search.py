@@ -1,4 +1,5 @@
 """Full-text search across spec titles and bodies."""
+
 from __future__ import annotations
 
 import json
@@ -6,14 +7,14 @@ import re
 from pathlib import Path
 
 import typer
-from rich.panel import Panel
-from rich.text import Text
-from rich.rule import Rule
 from rich import box
+from rich.panel import Panel
+from rich.rule import Rule
+from rich.text import Text
 
-from ..models import SpecStatus, STATUS_STYLE
-from ..storage import list_specs, find_root
-from ..ui import console, error
+from ..models import STATUS_STYLE, SpecStatus
+from ..storage import list_specs
+from ..ui import console, error, find_root_or_error
 
 
 def _highlight(text: str, query: str, style: str = "bold yellow") -> Text:
@@ -28,7 +29,7 @@ def _highlight(text: str, query: str, style: str = "bold yellow") -> Text:
             t.append(text[pos:])
             break
         t.append(text[pos:idx])
-        t.append(text[idx:idx + len(query)], style=style)
+        t.append(text[idx : idx + len(query)], style=style)
         pos = idx + len(query)
     return t
 
@@ -51,7 +52,7 @@ def _excerpt(body: str, query: str, context: int = 120) -> str:
 
 
 def cmd_search(query: str, status: str | None, json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
 
     if not query.strip():
         error("Search query cannot be empty.", json_out, {"error": "empty_query"})
@@ -72,39 +73,55 @@ def cmd_search(query: str, status: str | None, json_out: bool, root: Path) -> No
         title_match = bool(pattern.search(spec.title))
         body_match = bool(pattern.search(spec.body))
         if title_match or body_match:
-            results.append({
-                "spec": spec,
-                "title_match": title_match,
-                "body_match": body_match,
-                "excerpt": _excerpt(spec.body, query) if body_match else "",
-            })
+            results.append(
+                {
+                    "spec": spec,
+                    "title_match": title_match,
+                    "body_match": body_match,
+                    "excerpt": _excerpt(spec.body, query) if body_match else "",
+                }
+            )
 
     # Title matches first, then body-only
     results.sort(key=lambda r: (0 if r["title_match"] else 1, r["spec"].id))
 
     if json_out:
-        typer.echo(json.dumps([{
-            **r["spec"].to_dict(include_body=False),
-            "title_match": r["title_match"],
-            "body_match": r["body_match"],
-            "excerpt": r["excerpt"],
-        } for r in results]))
+        typer.echo(
+            json.dumps(
+                [
+                    {
+                        **r["spec"].to_dict(include_body=False),
+                        "title_match": r["title_match"],
+                        "body_match": r["body_match"],
+                        "excerpt": r["excerpt"],
+                    }
+                    for r in results
+                ]
+            )
+        )
         return
 
     console.print()
     if not results:
-        console.print(Panel(
-            f"[dim]No specs found matching[/dim] [bold yellow]\"{query}\"[/bold yellow]",
-            box=box.ROUNDED, border_style="dim",
-        ))
+        console.print(
+            Panel(
+                f'[dim]No specs found matching[/dim] [bold yellow]"{query}"[/bold yellow]',
+                box=box.ROUNDED,
+                border_style="dim",
+            )
+        )
         return
 
     match_word = "match" if len(results) == 1 else "matches"
-    console.print(Panel(
-        f"[bold yellow]🔍 \"{query}\"[/bold yellow]  [dim]— {len(results)} {match_word}[/dim]"
-        + (f"  [dim]in status:[/dim] [cyan]{status}[/cyan]" if status else ""),
-        box=box.ROUNDED, border_style="yellow", padding=(0, 2),
-    ))
+    console.print(
+        Panel(
+            f'[bold yellow]🔍 "{query}"[/bold yellow]  [dim]— {len(results)} {match_word}[/dim]'
+            + (f"  [dim]in status:[/dim] [cyan]{status}[/cyan]" if status else ""),
+            box=box.ROUNDED,
+            border_style="yellow",
+            padding=(0, 2),
+        )
+    )
     console.print()
 
     for r in results:
@@ -138,11 +155,16 @@ def cmd_search(query: str, status: str | None, json_out: bool, root: Path) -> No
         body_parts.append(footer)
 
         from rich.console import Group
-        console.print(Panel(
-            Group(*body_parts),
-            box=box.ROUNDED,
-            border_style=color,
-            padding=(0, 2),
-        ))
 
-    console.print(f"\n  [dim]{len(results)} result{'s' if len(results) != 1 else ''} for[/dim] [yellow]\"{query}\"[/yellow]\n")
+        console.print(
+            Panel(
+                Group(*body_parts),
+                box=box.ROUNDED,
+                border_style=color,
+                padding=(0, 2),
+            )
+        )
+
+    console.print(
+        f'\n  [dim]{len(results)} result{"s" if len(results) != 1 else ""} for[/dim] [yellow]"{query}"[/yellow]\n'
+    )

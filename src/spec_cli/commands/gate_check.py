@@ -12,8 +12,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from ..config import effective_gate, load_config
-from ..storage import find_root, find_spec
-from ..ui import console, not_found
+from ..storage import find_spec
+from ..ui import console, find_root_or_error, not_found
 
 _GATE_CHECKLIST_RE = re.compile(
     r"## Human Gate Checklist\s*\n(.*?)(?=\n## |\Z)",
@@ -44,7 +44,7 @@ def _parse_checklist_items(checklist: str) -> list[str]:
 
 
 def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)

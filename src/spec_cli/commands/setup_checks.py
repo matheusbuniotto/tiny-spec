@@ -13,7 +13,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..config import Kata, load_config, save_config
-from ..ui import console, error, success
+from ..ui import console, error, find_root_or_error, success
 
 # Each detector: (name, description, detect_fn, command)
 # detect_fn takes root Path, returns True if this tool is present
@@ -244,9 +244,7 @@ def _detect_checks(root: Path) -> list[Kata]:
 
 
 def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
-    from ..storage import find_root
-
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     cfg = load_config(root)
 
     detected = _detect_checks(root)

@@ -10,8 +10,8 @@ from rich import box
 from rich.table import Table
 
 from ..models import STATUS_STYLE, SpecStatus
-from ..storage import find_root, list_specs, open_blockers
-from ..ui import console, error, truncate_body, with_help
+from ..storage import list_specs, open_blockers
+from ..ui import console, error, find_root_or_error, truncate_body, with_help
 
 STALE_DAYS = 3
 
@@ -55,7 +55,7 @@ def cmd_list(
     blocked: bool = False,
     parent: Optional[str] = None,
 ) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     filter_status: Optional[SpecStatus] = None
 
     if status:

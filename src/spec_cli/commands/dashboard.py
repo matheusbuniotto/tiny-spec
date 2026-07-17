@@ -11,8 +11,8 @@ from rich.panel import Panel
 from rich.table import Table
 
 from ..models import STATUS_STYLE, Spec, SpecStatus
-from ..storage import find_root, list_specs, open_blockers
-from ..ui import console
+from ..storage import list_specs, open_blockers
+from ..ui import console, find_root_or_error
 
 STALE_DAYS = 3
 
@@ -104,7 +104,7 @@ def _layout(specs, live: bool = False) -> Table:
 
 
 def cmd_dashboard(root: Path, watch: bool) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, False)  # human-only command, no --json mode
     if not watch:
         console.print(_layout(list_specs(root)))
         return

@@ -9,12 +9,12 @@ from pathlib import Path
 
 import typer
 
-from ..storage import find_root, find_spec
-from ..ui import console, error, not_found
+from ..storage import find_spec
+from ..ui import console, error, find_root_or_error, not_found
 
 
 def cmd_edit(spec_id: str, json_out: bool, root: Path) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)

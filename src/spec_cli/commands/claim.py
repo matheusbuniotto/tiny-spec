@@ -14,8 +14,8 @@ from ..config import load_config
 from ..integrations.git import git_worktree_add
 from ..models import SpecStatus
 from ..state import transition
-from ..storage import find_root, find_spec, list_specs, open_blockers, save_spec, slugify
-from ..ui import console, error, next_command, not_found, with_help
+from ..storage import find_spec, list_specs, open_blockers, save_spec, slugify
+from ..ui import console, error, find_root_or_error, next_command, not_found, with_help
 
 
 def _worktree_path(root: Path, spec_id: str) -> Path:
@@ -51,7 +51,7 @@ def _worktree_panel_line(wt_fields: dict) -> str:
 def cmd_claim(
     spec_id: str, agent_name: str, yes: bool, json_out: bool, root: Path, worktree: bool = False
 ) -> None:
-    root = find_root(root)
+    root = find_root_or_error(root, json_out)
     spec = find_spec(root, spec_id)
     if not spec:
         not_found(spec_id, json_out)
