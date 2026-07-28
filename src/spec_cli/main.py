@@ -6,6 +6,7 @@ from typing import Optional
 import typer
 
 from .commands.assign import cmd_assign
+from .commands.checks import cmd_run_check
 from .commands.claim import cmd_claim
 from .commands.close import cmd_close
 from .commands.config_cmd import cmd_config_show
@@ -17,7 +18,6 @@ from .commands.gate_check import cmd_gate_check
 from .commands.git_sync import cmd_git_context, cmd_sync
 from .commands.greenfield import PROJECT_TYPES, cmd_greenfield
 from .commands.init import cmd_init
-from .commands.kata import cmd_run_kata
 from .commands.lifecycle import cmd_advance, cmd_revert
 from .commands.list_cmd import cmd_list
 from .commands.log_cmd import cmd_log
@@ -118,7 +118,7 @@ def advance(
     skip_checks: bool = typer.Option(
         False, "--skip-checks", help="Skip pre-gate checks (requires --note explaining why)"
     ),
-    skip_kata: bool = typer.Option(
+    skip_kata_alias: bool = typer.Option(
         False, "--skip-kata", help="Deprecated alias for --skip-checks", hidden=True
     ),
     pr: Optional[str] = typer.Option(
@@ -135,8 +135,8 @@ def advance(
         yes,
         json_out,
         root,
-        skip_kata=skip_checks or skip_kata,
-        skip_kata_reason=note or "",
+        skip_checks=skip_checks or skip_kata_alias,
+        skip_checks_reason=note or "",
         pr=pr,
     )
 
@@ -333,7 +333,12 @@ def setup_checks(
 @app.command("verify", rich_help_panel="Quality")
 def verify(
     spec_id: Optional[str] = typer.Argument(None, help="Spec ID (required for --summary)"),
-    summary: bool = typer.Option(False, "--summary", "-s", help="Show structured verification summary instead of running checks"),
+    summary: bool = typer.Option(
+        False,
+        "--summary",
+        "-s",
+        help="Show structured verification summary instead of running checks",
+    ),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
@@ -342,21 +347,21 @@ def verify(
         if not spec_id:
             typer.echo("Error: --summary requires a spec ID.", err=True)
             raise typer.Exit(1)
-        from .commands.kata import cmd_verify_summary
+        from .commands.checks import cmd_verify_summary
 
         cmd_verify_summary(spec_id, json_out, root)
     else:
-        cmd_run_kata(spec_id, json_out, root)
+        cmd_run_check(spec_id, json_out, root)
 
 
 @app.command("run-kata", rich_help_panel="Quality", hidden=True)
-def run_kata(
+def run_kata_alias(
     spec_id: Optional[str] = typer.Argument(None, help="Spec ID for context (optional)"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Deprecated alias for `spec verify`."""
-    cmd_run_kata(spec_id, json_out, root)
+    cmd_run_check(spec_id, json_out, root)
 
 
 # ── Setup ────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-"""Kata harness — run named verification scripts before a spec can enter at-gate."""
+"""Check harness — run named verification scripts before a spec can enter at-gate."""
 
 from __future__ import annotations
 
@@ -11,17 +11,17 @@ from typing import Optional
 
 import typer
 from rich import box
+from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
-from rich.markdown import Markdown
 
-from ..config import Kata, load_config
+from ..config import Check, load_config
 from ..storage import find_spec
 from ..ui import console, find_root_or_error, not_found
-from .gate_check import extract_gate_checklist, strip_class_markers, _split_checklist_items
+from .gate_check import _split_checklist_items, extract_gate_checklist, strip_class_markers
 
 # Regex to extract Acceptance Criteria lines with AC labels
-_AC_RE = re.compile(r'^\s*-\s*\[ \]\s*\*\*AC', re.MULTILINE)
+_AC_RE = re.compile(r"^\s*-\s*\[ \]\s*\*\*AC", re.MULTILINE)
 
 # Regex to find ## Acceptance Criteria section
 _AC_SECTION_RE = re.compile(
@@ -30,12 +30,12 @@ _AC_SECTION_RE = re.compile(
 )
 
 
-def run_kata(kata: Kata, root: Path) -> dict:
-    """Execute a single kata. Returns a result dict."""
+def run_check(check: Check, root: Path) -> dict:
+    """Execute a single check. Returns a result dict."""
     start = time.monotonic()
     try:
         result = subprocess.run(
-            kata.command,
+            check.command,
             shell=True,
             cwd=str(root),
             capture_output=True,
@@ -45,9 +45,9 @@ def run_kata(kata: Kata, root: Path) -> dict:
         elapsed = time.monotonic() - start
         passed = result.returncode == 0
         return {
-            "name": kata.name,
-            "command": kata.command,
-            "description": kata.description,
+            "name": check.name,
+            "command": check.command,
+            "description": check.description,
             "passed": passed,
             "exit_code": result.returncode,
             "stdout": result.stdout.strip(),
@@ -56,20 +56,20 @@ def run_kata(kata: Kata, root: Path) -> dict:
         }
     except subprocess.TimeoutExpired:
         return {
-            "name": kata.name,
-            "command": kata.command,
-            "description": kata.description,
+            "name": check.name,
+            "command": check.command,
+            "description": check.description,
             "passed": False,
             "exit_code": -1,
             "stdout": "",
-            "stderr": "Kata timed out after 300s",
+            "stderr": "Check timed out after 300s",
             "elapsed_s": 300.0,
         }
     except Exception as e:
         return {
-            "name": kata.name,
-            "command": kata.command,
-            "description": kata.description,
+            "name": check.name,
+            "command": check.command,
+            "description": check.description,
             "passed": False,
             "exit_code": -1,
             "stdout": "",
@@ -78,21 +78,21 @@ def run_kata(kata: Kata, root: Path) -> dict:
         }
 
 
-def run_katas_for_spec(root: Path, spec_id: Optional[str] = None) -> tuple[list[dict], bool]:
+def run_checks_for_spec(root: Path, spec_id: Optional[str] = None) -> tuple[list[dict], bool]:
     """
-    Run all configured katas.
+    Run all configured checks.
     Returns (results, all_passed).
     spec_id is used only for display context.
     """
     cfg = load_config(root)
-    if not cfg.katas:
+    if not cfg.checks:
         return [], True
 
     results = []
-    for kata in cfg.katas:
-        if not cfg.katas:
+    for check in cfg.checks:
+        if not cfg.checks:
             break
-        r = run_kata(kata, root)
+        r = run_check(check, root)
         results.append(r)
 
     all_passed = all(r["passed"] for r in results)
@@ -144,7 +144,7 @@ def _render_results(results: list[dict], spec_id: Optional[str], root: Path) -> 
         )
 
 
-def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
+def cmd_run_check(spec_id: Optional[str], json_out: bool, root: Path) -> None:
     root = find_root_or_error(root, json_out)
     cfg = load_config(root)
 
@@ -153,7 +153,7 @@ def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
         if not spec:
             not_found(spec_id, json_out)
 
-    if not cfg.katas:
+    if not cfg.checks:
         if json_out:
             typer.echo(
                 json.dumps({"checks": [], "all_passed": True, "message": "No checks configured"})
@@ -173,7 +173,7 @@ def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
         return
 
     if not json_out:
-        total = len(cfg.katas)
+        total = len(cfg.checks)
         console.print()
         console.print(
             Panel(
@@ -187,22 +187,20 @@ def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
         console.print()
 
     results = []
-    for i, kata in enumerate(cfg.katas):
+    for i, check in enumerate(cfg.checks):
         if not json_out:
-            label = (
-                f"  [{i + 1}/{len(cfg.katas)}] [bold]{kata.name}[/bold]  [dim]{kata.command}[/dim]"
-            )
+            label = f"  [{i + 1}/{len(cfg.checks)}] [bold]{check.name}[/bold]  [dim]{check.command}[/dim]"
             with console.status(label, spinner="dots"):
-                r = run_kata(kata, root)
+                r = run_check(check, root)
             icon = "[bright_green]✓[/bright_green]" if r["passed"] else "[red]✕[/red]"
             time_str = f"[dim]{r['elapsed_s']}s[/dim]"
-            desc = f"  [dim]{kata.description}[/dim]" if kata.description else ""
-            console.print(f"  {icon}  [bold]{kata.name}[/bold]{desc}  {time_str}")
+            desc = f"  [dim]{check.description}[/dim]" if check.description else ""
+            console.print(f"  {icon}  [bold]{check.name}[/bold]{desc}  {time_str}")
             if not r["passed"] and r["stderr"]:
                 for line in r["stderr"].splitlines()[-3:]:
                     console.print(f"     [red dim]{line}[/red dim]")
         else:
-            r = run_kata(kata, root)
+            r = run_check(check, root)
         results.append(r)
 
     all_passed = all(r["passed"] for r in results)
@@ -276,9 +274,7 @@ def cmd_verify_summary(spec_id: str, json_out: bool, root: Path) -> None:
     # Collect git diff evidence
     diff_stat = ""
     try:
-        result = subprocess.run(
-            ["git", "diff", "--stat"], capture_output=True, text=True, cwd=root
-        )
+        result = subprocess.run(["git", "diff", "--stat"], capture_output=True, text=True, cwd=root)
         if result.returncode == 0 and result.stdout.strip():
             diff_stat = result.stdout.rstrip()
     except Exception:
@@ -306,9 +302,9 @@ def cmd_verify_summary(spec_id: str, json_out: bool, root: Path) -> None:
 
     # Human-readable panel
     md_parts = []
-    md_parts.append("**{spec.id}** — *{spec.title}*\n\nstatus: `{spec.status.value}`\n".format(
-        spec=spec
-    ))
+    md_parts.append(
+        "**{spec.id}** — *{spec.title}*\n\nstatus: `{spec.status.value}`\n".format(spec=spec)
+    )
 
     if ac_items:
         md_parts.append("**Acceptance Criteria**\n" + "\n".join(ac_items))
@@ -316,17 +312,14 @@ def cmd_verify_summary(spec_id: str, json_out: bool, root: Path) -> None:
     if checklist_raw:
         agent_note = ""
         if has_agent_items:
-            agent_note = ("  *(agent-verifiable: {n_agent}, "
-                         "human-only: {n_human})*").format(
+            agent_note = ("  *(agent-verifiable: {n_agent}, human-only: {n_human})*").format(
                 n_agent=len(agent_items), n_human=len(human_items)
             )
         md_parts.append("**Gate Checklist**" + agent_note)
         md_parts.append(strip_class_markers(checklist_raw))
 
     if diff_stat:
-        md_parts.append("**Evidence — git diff --stat**\n```\n{diff}\n```".format(
-            diff=diff_stat
-        ))
+        md_parts.append("**Evidence — git diff --stat**\n```\n{diff}\n```".format(diff=diff_stat))
 
     md_parts.append(
         "**Verdict** — run one of:\n"
@@ -346,5 +339,5 @@ def cmd_verify_summary(spec_id: str, json_out: bool, root: Path) -> None:
     if has_agent_items:
         console.print(
             "  [dim]Items marked \\[agent] are meant for AI pre-verification. "
-            "Pass \u2014 don't re-do them. Items marked \\[human] need your judgment.[/dim]"
+            "Pass — don't re-do them. Items marked \\[human] need your judgment.[/dim]"
         )

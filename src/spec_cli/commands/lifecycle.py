@@ -24,8 +24,8 @@ from ..ui import (
     with_help,
     worktree_reminder_fields,
 )
+from .checks import run_checks_for_spec
 from .gate_check import extract_gate_checklist, strip_class_markers
-from .kata import run_katas_for_spec
 
 # Gate states require notes
 _NOTES_REQUIRED = {SpecStatus.AT_GATE, SpecStatus.IMPLEMENTED}
@@ -103,8 +103,8 @@ def _do_transition(
     yes: bool,
     json_out: bool,
     root: Path,
-    skip_kata: bool = False,
-    skip_kata_reason: str = "",
+    skip_checks: bool = False,
+    skip_checks_reason: str = "",
     pr: Optional[str] = None,
 ) -> None:
     from ..config import effective_gate, load_config
@@ -146,12 +146,12 @@ def _do_transition(
     # Check gate enforcement — runs before entering at-gate
     if target == SpecStatus.AT_GATE:
         cfg = load_config(root)
-        if cfg.katas and not skip_kata:
+        if cfg.checks and not skip_checks:
             if not json_out:
                 console.print(
-                    f"[dim]Running {len(cfg.katas)} check{'s' if len(cfg.katas) != 1 else ''} before gate...[/dim]\n"
+                    f"[dim]Running {len(cfg.checks)} check{'s' if len(cfg.checks) != 1 else ''} before gate...[/dim]\n"
                 )
-            results, all_passed = run_katas_for_spec(root, spec_id)
+            results, all_passed = run_checks_for_spec(root, spec_id)
             if not all_passed:
                 failed = [r["name"] for r in results if not r["passed"]]
                 if json_out:
@@ -166,7 +166,7 @@ def _do_transition(
                         },
                     )
                 console.print()
-                from .kata import _render_results
+                from .checks import _render_results
 
                 _render_results(results, spec_id, root)
                 raise typer.Exit(1)
@@ -175,9 +175,9 @@ def _do_transition(
                 console.print(
                     f"  [bright_green]✓[/bright_green] [dim]{passed_count}/{len(results)} checks passed[/dim]\n"
                 )
-        elif skip_kata and cfg.katas:
+        elif skip_checks and cfg.checks:
             if not json_out:
-                reason_str = f" — {skip_kata_reason}" if skip_kata_reason else ""
+                reason_str = f" — {skip_checks_reason}" if skip_checks_reason else ""
                 console.print(f"  [yellow]⚠ Checks skipped{reason_str}[/yellow]\n")
 
     cfg = load_config(root)
@@ -257,8 +257,8 @@ def cmd_advance(
     yes: bool,
     json_out: bool,
     root: Path,
-    skip_kata: bool = False,
-    skip_kata_reason: str = "",
+    skip_checks: bool = False,
+    skip_checks_reason: str = "",
     pr: Optional[str] = None,
 ) -> None:
     root = find_root_or_error(root, json_out)
@@ -271,7 +271,7 @@ def cmd_advance(
             {"error": "terminal_state", "status": spec.status.value},
         )
     _do_transition(
-        spec_id, next_states[0], note, yes, json_out, root, skip_kata, skip_kata_reason, pr=pr
+        spec_id, next_states[0], note, yes, json_out, root, skip_checks, skip_checks_reason, pr=pr
     )
 
 
