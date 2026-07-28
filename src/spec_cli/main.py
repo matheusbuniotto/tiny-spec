@@ -332,12 +332,21 @@ def setup_checks(
 
 @app.command("verify", rich_help_panel="Quality")
 def verify(
-    spec_id: Optional[str] = typer.Argument(None, help="Spec ID for context (optional)"),
+    spec_id: Optional[str] = typer.Argument(None, help="Spec ID (required for --summary)"),
+    summary: bool = typer.Option(False, "--summary", "-s", help="Show structured verification summary instead of running checks"),
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
-    """Run all configured checks. Exits 1 if any fail."""
-    cmd_run_kata(spec_id, json_out, root)
+    """Run all configured checks, or show a verification summary with --summary."""
+    if summary:
+        if not spec_id:
+            typer.echo("Error: --summary requires a spec ID.", err=True)
+            raise typer.Exit(1)
+        from .commands.kata import cmd_verify_summary
+
+        cmd_verify_summary(spec_id, json_out, root)
+    else:
+        cmd_run_kata(spec_id, json_out, root)
 
 
 @app.command("run-kata", rich_help_panel="Quality", hidden=True)
