@@ -300,6 +300,67 @@ export OPENAI_API_KEY=sk-...      # OpenAI
 
 ---
 
+## Automating specs with AI agents
+
+`scripts/spec-loop.sh` is a reference implementation for running specs with AI agents in a loop. It handles the full lifecycle:
+
+```bash
+bash scripts/spec-loop.sh --pick next --agent codex              # run next spec, human verify (default)
+bash scripts/spec-loop.sh --pick 0003 --agent codex --test manual # specific spec, manual impl
+bash scripts/spec-loop.sh --pick next --max 3                     # 3 specs, then stop
+bash scripts/spec-loop.sh --pick next --agent codex --verifier codex  # codex verifies with fresh context
+bash scripts/spec-loop.sh --pick next --agent codex --worktree    # isolated git worktree per spec
+bash scripts/spec-loop.sh --pick next --dry-run                   # preview without changing anything
+```
+
+### Features
+
+- **Multi-agent**: supports `kimi`, `pi`, `codex`, `claude` with auto-detection
+- **Verifier split**: `--verifier human` (default) defers a structured summary for you; `--verifier codex` etc invokes a **different agent** with fresh context (ACs + diff + gate checklist only, no implementation plan)
+- **Worktree isolation**: `--worktree` creates an isolated git worktree per spec; merges to main on success, discards on failure
+- **Evidence collection**: extracts ACs from the spec file, gate checklist via `spec gate-check --json`, and git diff stat — shows you exactly what to validate
+- **Compact output**: spinner with elapsed timer, heartbeat every 30s, one-line-per-phase results
+- **Human verification summary**: at end of loop, prints a structured block per spec with ACs, gate checklist, diff stat, and commands to validate
+- **Retry with backoff**: agent retries up to 2× on failure, reverts spec to draft on exhaustion
+
+### Verifier architecture
+
+The loop implements a **verification separation of concerns**:
+
+1. **Human verifier** (`--verifier human`, default): the agent implements, code is committed with "awaiting human verify", loop continues to next spec. At end, you get a structured summary for each spec showing ACs, gate checklist, diff stat, and how to run. You validate and `spec advance <id>` or `spec revert <id>`.
+
+2. **Agent verifier** (`--verifier codex` etc): a different agent (fresh context, no implementation bias) gets only the spec's acceptance criteria + git diff evidence + gate checklist. It runs actual commands to check ACs, reports PASS/FAIL/NEEDS HUMAN. This is intentionally not the same agent that implemented — it has zero context about what the implementer was thinking.
+
+3. **Human escalation**: when either path returns "needs human" (visual inspection, product judgment), the spec is left at `at-gate` with a note so you can verify and advance manually.
+
+The agent-verifier prompt contains *only* the ACs, the diff stat, and the gate checklist — the full spec body (with technical notes and implementation plan) is deliberately excluded to prevent confirmation bias.
+
+### Customizing for your project
+
+Edit the `AGENT_SYSTEM_PROMPT` variable at the top of `scripts/spec-loop.sh` with your project's context:
+
+```bash
+AGENT_SYSTEM_PROMPT="You are an autonomous implementation agent for My App...
+
+## Project
+Stack: Python + FastAPI
+Conventions: async everywhere, no globals
+Out of bounds: don't touch billing"
+```
+
+Configurable placeholders used internally: `{{SPEC_ID}}`, `{{SPEC_TITLE}}`, `{{SPEC_BODY}}`, `{{PROJECT_DIR}}`.
+
+### Agent compatibility
+
+| Agent | Flag | Status |
+|---|---|---|
+| Claude Code | `--agent claude` | ✅ Tested (needs `claude` CLI) |
+| Codex CLI | `--agent codex` | ✅ Tested |
+| Kimi | `--agent kimi` | ✅ Tested |
+| Pi (Terminal) | `--agent pi` | ✅ Tested |
+
+---
+
 ## License
 
 MIT
