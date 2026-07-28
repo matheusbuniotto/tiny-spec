@@ -540,8 +540,10 @@ REVIEW
     AGENT="$VERIFY_AGENT"
     invoke_agent "$review_file" "$review_log" "verify #${SPEC_ID}"
     local rc=$?
-    AGENT="$saved_agent"
-    [[ $rc -ne 0 ]] && return 1
+    AGENT="$saved_agent"  # restore
+
+    # Verifier crashed/errored (not a content FAIL) — don't destroy real work, ask a human.
+    [[ $rc -ne 0 ]] && return 2
 
     local verdict
     verdict=$(grep -i "VERDICT:" "$review_log" | tail -1 \
