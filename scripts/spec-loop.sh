@@ -199,6 +199,8 @@ detect_agent() {
 
 [[ "$TEST" == "agent" ]] && detect_agent
 
+[[ "$AGENT_TIMEOUT" =~ ^[0-9]+$ ]] || { bad "--timeout must be a non-negative integer"; exit 1; }
+
 # ─── Verifier detection ──────────────────────────────────────────────────────
 detect_verifier() {
     if [[ "$VERIFIER" == "human" ]]; then
@@ -318,18 +320,20 @@ invoke_agent() {
     cd "$work_dir"
 
     local cmd_pid=""
+    local -a agent_cmd
+    case "$AGENT" in
+        kimi)   agent_cmd=(kimi -p "$(<"$prompt_file")" --auto --add-dir "$work_dir") ;;
+        pi)     agent_cmd=(pi --print --no-session "$(<"$prompt_file")") ;;
+        codex)  agent_cmd=(codex exec --sandbox workspace-write -) ;;
+        claude) agent_cmd=(claude -p --output-format text --permission-mode acceptEdits --add-dir "$work_dir") ;;
+        *)      bad "unknown agent: $AGENT"; return 1 ;;
+    esac
 
-    _run_agent() {
-        case "$AGENT" in
-            kimi)   kimi -p "$(cat "$prompt_file")" --auto --add-dir "$work_dir" ;;
-            pi)     pi --print --no-session "$(cat "$prompt_file")" ;;
-            codex)  codex exec --sandbox workspace-write - < "$prompt_file" ;;
-            claude) claude -p --output-format text --permission-mode acceptEdits --add-dir "$work_dir" < "$prompt_file" ;;
-            *)      bad "unknown agent: $AGENT"; return 1 ;;
-        esac
-    }
-
-    _run_agent >"$output_log" 2>&1 &
+    python3 -c '
+import os, sys
+os.setsid()
+os.execvp(sys.argv[1], sys.argv[1:])
+' "${agent_cmd[@]}" < "$prompt_file" >"$output_log" 2>&1 &
     cmd_pid=$!
 
     $VERBOSE && v "  ${D}agent: $AGENT${X}"
@@ -342,11 +346,9 @@ invoke_agent() {
 
         if [[ "$AGENT_TIMEOUT" -gt 0 && $e -ge $AGENT_TIMEOUT ]]; then
             timed_out=true
-            # ponytail: best-effort kill, no process-group tracking — revisit
-            # if agent CLIs fork long-lived children that outlive this signal.
-            kill "$cmd_pid" 2>/dev/null
+            kill -TERM -- "-$cmd_pid" 2>/dev/null || kill -TERM "$cmd_pid" 2>/dev/null
             sleep 1
-            kill -9 "$cmd_pid" 2>/dev/null
+            kill -KILL -- "-$cmd_pid" 2>/dev/null || kill -KILL "$cmd_pid" 2>/dev/null
             break
         fi
 
@@ -632,7 +634,7 @@ advance_to_done() {
         else
             git -C "$PROJECT_DIR" merge --abort 2>/dev/null || true
             hesitate "merge conflict — keeping worktree at $WORKTREE_DIR for manual resolution"
-            return 0
+            return 1
         fi
     fi
 
@@ -723,8 +725,12 @@ main() {
                 if $DRY_RUN; then
                     good "verify (dry-run) — would advance to done"
                 else
-                    advance_to_done
-                    good "#${SPEC_ID} done"
+                    if advance_to_done; then
+                        good "#${SPEC_ID} done"
+                    else
+                        hesitate "#${SPEC_ID} awaiting manual merge resolution"
+                        exit 1
+                    fi
                 fi
                 ;;
             1)
