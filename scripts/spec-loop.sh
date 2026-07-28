@@ -73,6 +73,7 @@ VERIFIER="human"
 VERIFY_AGENT=""
 WORKTREE=false
 WORKTREE_DIR=""
+AGENT_TIMEOUT=0   # seconds; 0 = unlimited
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_DIR="$PROJECT_DIR/.spec/logs"
@@ -97,6 +98,7 @@ spec-loop.sh — spec-driven agent loop
                      agent verifier gets fresh-context (ACs + diff + checklist)
                      human verifier defers summary at end of loop
   --max <N>          max iterations (0 = unlimited, default)
+  --timeout <N>      max seconds per agent invocation (0 = unlimited, default)
   --verbose          show detailed phase-by-phase logs
   --worktree         isolated git worktree per spec (merge to master on done)
   --dry-run          show plan, change nothing
@@ -112,6 +114,7 @@ while [[ $# -gt 0 ]]; do
         --agent)       AGENT="$2"; shift 2 ;;
         --verifier)    VERIFIER="$2"; shift 2 ;;
         --max)         MAX_ITERS="$2"; shift 2 ;;
+        --timeout)     AGENT_TIMEOUT="$2"; shift 2 ;;
         --dry-run)     DRY_RUN=true; shift ;;
         --worktree)    WORKTREE=true; shift ;;
         --verbose)     VERBOSE=true; shift ;;
@@ -208,12 +211,21 @@ detect_verifier() {
 }
 detect_verifier
 
-# ─── JSON helper (no jq) ─────────────────────────────────────────────────────
+# ─── JSON helper (python3, not regex — real parsing, handles arrays) ────────
 jval() {
     local json="$1" key="$2"
-    echo "$json" | sed 's/[{}]/\n/g' \
-        | grep -o "\"${key}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" | head -1 \
-        | sed "s/.*\"${key}\"[[:space:]]*:[[:space:]]*\"//;s/\"$//"
+    python3 -c '
+import json, sys
+try:
+    d = json.loads(sys.argv[1])
+    v = d.get(sys.argv[2])
+    if isinstance(v, list):
+        print(",".join(str(x) for x in v))
+    elif v is not None:
+        print(v)
+except Exception:
+    pass
+' "$json" "$key" 2>/dev/null
 }
 
 # ─── Pick ────────────────────────────────────────────────────────────────────
@@ -226,63 +238,25 @@ pick_spec() {
         SPEC_ID=$(jval "$json" id)
         SPEC_TITLE=$(jval "$json" title)
         SPEC_STATUS=$(jval "$json" status)
-        SPEC_BLOCKED=$(echo "$json" | grep -o '"blocked_by"[[:space:]]*:[[:space:]]*\[[^]]*\]' | sed 's/.*\[//;s/\]//' | tr -d '" ')
+        SPEC_BLOCKED=$(jval "$json" blocked_by)
         return
     fi
 
+    # `spec next --json` already returns the highest-priority *unblocked* spec
+    # across every status (draft included), falling back to the top blocked
+    # one only when literally everything is blocked. No need to re-derive
+    # that here — trust it instead of re-scanning `spec list`'s table output.
     local next_json
     next_json=$(spec next --json 2>/dev/null || echo "")
     if [[ -n "$next_json" ]]; then
         SPEC_ID=$(jval "$next_json" id)
         SPEC_TITLE=$(jval "$next_json" title)
         SPEC_STATUS=$(jval "$next_json" status)
-        SPEC_BLOCKED=$(echo "$next_json" | grep -o '"blocked_by"[[:space:]]*:[[:space:]]*\[[^]]*\]' | sed 's/.*\[//;s/\]//' | tr -d '" ')
+        SPEC_BLOCKED=$(jval "$next_json" blocked_by)
     fi
 
-    # If blocked, scan for unblocked draft
-    if [[ -z "$SPEC_ID" ]] || [[ "$SPEC_BLOCKED" =~ [0-9] ]]; then
-        v "  next is blocked — scanning drafts..."
-        local best_id="" best_title=""
-        local all_ids
-        all_ids=$(spec list 2>/dev/null \
-            | grep -oE '│[[:space:]]*0[0-9]{3}[[:space:]]*│' \
-            | sed 's/│//g' | tr -d ' ' | sort -u)
-
-        for sid in $all_ids; do
-            local j st bl
-            j=$(spec show "$sid" --json 2>/dev/null || echo "")
-            [[ -z "$j" ]] && continue
-            st=$(jval "$j" status)
-            bl=$(echo "$j" | grep -o '"blocked_by"[[:space:]]*:[[:space:]]*\[[^]]*\]' | sed 's/.*\[//;s/\]//' | tr -d '" ')
-            [[ "$st" != "draft" ]] && continue
-
-            local blocked=false
-            if [[ -n "$bl" ]] && [[ "$bl" =~ [0-9] ]]; then
-                for dep in $bl; do
-                    local dep_st
-                    dep_st=$(jval "$(spec show "$dep" --json 2>/dev/null || echo '{}')" status)
-                    [[ "$dep_st" != "implemented" ]] && [[ "$dep_st" != "closed" ]] && { blocked=true; break; }
-                done
-            fi
-
-            if ! $blocked; then
-                if [[ -z "$best_id" ]] || [[ "$sid" < "$best_id" ]]; then
-                    best_id="$sid"
-                    best_title=$(jval "$j" title)
-                fi
-            fi
-        done
-
-        if [[ -n "$best_id" ]]; then
-            SPEC_ID="$best_id"; SPEC_TITLE="$best_title"
-            SPEC_STATUS="draft"; SPEC_BLOCKED=""
-        else
-            if [[ -n "$SPEC_ID" ]]; then
-                hesitate "all drafts blocked — next is #${SPEC_ID} (blocked by: ${SPEC_BLOCKED:-?})"
-            else
-                bad "no specs available"; exit 0
-            fi
-        fi
+    if [[ -n "$SPEC_ID" ]] && [[ -n "$SPEC_BLOCKED" ]]; then
+        hesitate "everything is blocked — next is #${SPEC_ID} (blocked by: ${SPEC_BLOCKED})"
     fi
 }
 
@@ -358,38 +332,49 @@ invoke_agent() {
     _run_agent >"$output_log" 2>&1 &
     cmd_pid=$!
 
-    if $VERBOSE; then
-        v "  ${D}agent: $AGENT${X}"
-        wait "$cmd_pid" 2>/dev/null
-        return $?
-    fi
+    $VERBOSE && v "  ${D}agent: $AGENT${X}"
 
     local sc=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-    local i=0 start=$SECONDS last_hb=0
+    local i=0 start=$SECONDS last_hb=0 timed_out=false
 
     while kill -0 "$cmd_pid" 2>/dev/null; do
         local e=$((SECONDS - start))
-        local t="${e}s"
-        [[ $e -ge 60 ]] && t="$((e/60))m$(printf '%02d' $((e%60)))"
-        printf "\r${D}${sc[$((i%10))]}${X} ${B}%s${X} ${D}(%s)${X}   " "$label" "$t" >&2
-        i=$((i+1))
 
-        if [[ $((e - last_hb)) -ge 30 ]]; then
-            last_hb=$e
-            printf "\n${D}  … %s (%s)${X}\n" "$label" "$t" >&2
+        if [[ "$AGENT_TIMEOUT" -gt 0 && $e -ge $AGENT_TIMEOUT ]]; then
+            timed_out=true
+            # ponytail: best-effort kill, no process-group tracking — revisit
+            # if agent CLIs fork long-lived children that outlive this signal.
+            kill "$cmd_pid" 2>/dev/null
+            sleep 1
+            kill -9 "$cmd_pid" 2>/dev/null
+            break
         fi
+
+        if ! $VERBOSE; then
+            local t="${e}s"
+            [[ $e -ge 60 ]] && t="$((e/60))m$(printf '%02d' $((e%60)))"
+            printf "\r${D}${sc[$((i%10))]}${X} ${B}%s${X} ${D}(%s)${X}   " "$label" "$t" >&2
+            if [[ $((e - last_hb)) -ge 30 ]]; then
+                last_hb=$e
+                printf "\n${D}  … %s (%s)${X}\n" "$label" "$t" >&2
+            fi
+        fi
+        i=$((i+1))
         sleep 0.15
     done
 
     wait "$cmd_pid" 2>/dev/null
     local ec=$?
-    printf "\r\033[K" >&2
+    $timed_out && ec=124
+    ! $VERBOSE && printf "\r\033[K" >&2
 
     local e=$((SECONDS - start))
     local t="${e}s"
     [[ $e -ge 60 ]] && t="$((e/60))m$(printf '%02d' $((e%60)))"
 
-    if [[ $ec -eq 0 ]]; then
+    if $timed_out; then
+        bad "$label ($t, timed out after ${AGENT_TIMEOUT}s)"
+    elif [[ $ec -eq 0 ]]; then
         good "$label ($t)"
     else
         bad "$label ($t, exit $ec)"
@@ -400,16 +385,26 @@ invoke_agent() {
 # ─── Build prompt ────────────────────────────────────────────────────────────
 build_prompt() {
     local spec_body
-    spec_body=$(spec show "$SPEC_ID" --full 2>/dev/null | sed 's/^/  /')
+    spec_body=$(spec show "$SPEC_ID" --full 2>/dev/null)
 
     local work_dir="$PROJECT_DIR"
     [[ -n "$WORKTREE_DIR" ]] && work_dir="$WORKTREE_DIR"
 
-    echo "$AGENT_SYSTEM_PROMPT" \
-        | sed "s/{{SPEC_ID}}/$SPEC_ID/g" \
-        | sed "s/{{SPEC_TITLE}}/$(echo "$SPEC_TITLE" | sed 's/[\/&]/\\&/g')/g" \
-        | sed "s/{{SPEC_BODY}}/$(echo "$spec_body" | sed 's/[\/&]/\\&/g')/g" \
-        | sed "s|{{PROJECT_DIR}}|$work_dir|g"
+    # python3 string replace, not sed — spec bodies are multi-line and can
+    # contain '&', '/', '\' (all sed-special), which broke placeholder
+    # substitution (BSD sed on macOS also rejects unescaped newlines in the
+    # replacement, unlike GNU sed).
+    SPEC_ID="$SPEC_ID" SPEC_TITLE="$SPEC_TITLE" SPEC_BODY="$spec_body" \
+        WORK_DIR="$work_dir" PROMPT_TEMPLATE="$AGENT_SYSTEM_PROMPT" \
+        python3 -c '
+import os
+t = os.environ["PROMPT_TEMPLATE"]
+t = t.replace("{{SPEC_ID}}", os.environ["SPEC_ID"])
+t = t.replace("{{SPEC_TITLE}}", os.environ["SPEC_TITLE"])
+t = t.replace("{{SPEC_BODY}}", os.environ["SPEC_BODY"])
+t = t.replace("{{PROJECT_DIR}}", os.environ["WORK_DIR"])
+print(t)
+'
 }
 
 # ─── Run agent ────────────────────────────────────────────────────────────────
@@ -628,15 +623,17 @@ advance_to_done() {
         branch=$(git -C "$WORKTREE_DIR" branch --show-current 2>/dev/null)
         v "  merging $branch → master..."
         git -C "$PROJECT_DIR" checkout master 2>/dev/null
-        git -C "$PROJECT_DIR" merge "$branch" --no-edit -X theirs 2>/dev/null || {
+        if git -C "$PROJECT_DIR" merge "$branch" --no-edit 2>/dev/null; then
+            v "  merged"
+            git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
+            git branch -d "$branch" 2>/dev/null || true
+            WORKTREE_DIR=""
+            v "  worktree cleaned up"
+        else
+            git -C "$PROJECT_DIR" merge --abort 2>/dev/null || true
             hesitate "merge conflict — keeping worktree at $WORKTREE_DIR for manual resolution"
             return 0
-        }
-        v "  merged"
-        git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
-        git branch -d "$branch" 2>/dev/null || true
-        WORKTREE_DIR=""
-        v "  worktree cleaned up"
+        fi
     fi
 
     spec sync 2>/dev/null || true
@@ -649,15 +646,11 @@ handle_failure() {
     if $DRY_RUN; then status "revert (dry-run)"; return; fi
 
     if $WORKTREE && [[ -n "$WORKTREE_DIR" ]]; then
-        local branch
-        branch=$(git -C "$WORKTREE_DIR" branch --show-current 2>/dev/null)
         v "  discarding worktree..."
+        # Failed work must never reach master — no commit, no merge, just gone.
         git -C "$PROJECT_DIR" checkout master 2>/dev/null || true
-        git -C "$WORKTREE_DIR" add -A 2>/dev/null || true
-        git -C "$WORKTREE_DIR" commit -m "spec(${SPEC_ID}): revert (failed)" 2>/dev/null || true
-        git -C "$PROJECT_DIR" merge "spec/${SPEC_ID}" --no-edit -X theirs 2>/dev/null || true
         git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
-        git branch -D "spec/${SPEC_ID}" 2>/dev/null || true
+        git -C "$PROJECT_DIR" branch -D "spec/${SPEC_ID}" 2>/dev/null || true
         WORKTREE_DIR=""
         v "  worktree discarded"
     fi
@@ -763,12 +756,14 @@ main() {
                         local branch
                         branch=$(git -C "$WORKTREE_DIR" branch --show-current 2>/dev/null)
                         git -C "$PROJECT_DIR" checkout master 2>/dev/null || true
-                        git -C "$PROJECT_DIR" merge "$branch" --no-edit -X theirs 2>/dev/null || {
-                            hesitate "merge conflict — keeping worktree at $WORKTREE_DIR"
-                        }
-                        git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
-                        git branch -d "$branch" 2>/dev/null || true
-                        WORKTREE_DIR=""
+                        if git -C "$PROJECT_DIR" merge "$branch" --no-edit 2>/dev/null; then
+                            git worktree remove "$WORKTREE_DIR" --force 2>/dev/null || true
+                            git branch -d "$branch" 2>/dev/null || true
+                            WORKTREE_DIR=""
+                        else
+                            git -C "$PROJECT_DIR" merge --abort 2>/dev/null || true
+                            hesitate "merge conflict — keeping worktree at $WORKTREE_DIR for manual resolution"
+                        fi
                     else
                         git -C "$PROJECT_DIR" add -A 2>/dev/null || true
                         git -C "$PROJECT_DIR" commit -m "spec(${SPEC_ID}): implement (awaiting human verify)" 2>/dev/null || true
