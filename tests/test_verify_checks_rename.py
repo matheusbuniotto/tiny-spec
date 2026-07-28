@@ -2,7 +2,7 @@ import json
 
 from typer.testing import CliRunner
 
-from spec_cli.config import Config, Kata, load_config, save_config
+from spec_cli.config import Check, Config, load_config, save_config
 from spec_cli.main import app
 
 runner = CliRunner()
@@ -20,7 +20,7 @@ def test_load_config_reads_checks_key(tmp_path):
         "checks:\n  - name: tests\n    command: pytest\n    description: Full suite\n",
     )
     cfg = load_config(tmp_path)
-    assert cfg.katas == [Kata(name="tests", command="pytest", description="Full suite")]
+    assert cfg.checks == [Check(name="tests", command="pytest", description="Full suite")]
 
 
 def test_load_config_still_reads_legacy_katas_key(tmp_path):
@@ -29,13 +29,13 @@ def test_load_config_still_reads_legacy_katas_key(tmp_path):
         "katas:\n  - name: lint\n    command: ruff check .\n    description: Linter\n",
     )
     cfg = load_config(tmp_path)
-    assert cfg.katas == [Kata(name="lint", command="ruff check .", description="Linter")]
+    assert cfg.checks == [Check(name="lint", command="ruff check .", description="Linter")]
 
 
 def test_save_config_writes_checks_key_not_katas(tmp_path):
     sd = tmp_path / ".spec"
     sd.mkdir()
-    cfg = Config(katas=[Kata(name="tests", command="pytest")])
+    cfg = Config(checks=[Check(name="tests", command="pytest")])
     save_config(cfg, tmp_path)
 
     raw = (sd / "config.yaml").read_text()
@@ -47,7 +47,7 @@ def _init_with_one_check(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init", "--yes", "--json"])
     cfg = load_config(tmp_path)
-    cfg.katas = [Kata(name="tests", command='python -c "import sys; sys.exit(0)"')]
+    cfg.checks = [Check(name="tests", command='python -c "import sys; sys.exit(0)"')]
     save_config(cfg, tmp_path)
 
 
@@ -80,7 +80,7 @@ def _failing_check_project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init", "--yes", "--json"])
     cfg = load_config(tmp_path)
-    cfg.katas = [Kata(name="tests", command='python -c "import sys; sys.exit(1)"')]
+    cfg.checks = [Check(name="tests", command='python -c "import sys; sys.exit(1)"')]
     save_config(cfg, tmp_path)
     new_result = runner.invoke(app, ["new", "Thing", "--yes", "--json"])
     spec_id = json.loads(new_result.stdout)["id"]

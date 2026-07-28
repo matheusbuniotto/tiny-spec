@@ -7,7 +7,7 @@ import yaml
 
 
 @dataclass
-class Kata:
+class Check:
     """A named harness step that must pass before a spec can enter at-gate."""
 
     name: str
@@ -29,8 +29,8 @@ class Config:
     git_auto_commit: bool = True  # auto-commit .spec/ on transitions
     gate: str = "local"  # local | draft | pr — how the human gate is satisfied
 
-    # Kata harness — commands that must pass before entering at-gate
-    katas: list = field(default_factory=list)  # list of Kata objects
+    # Check harness — commands that must pass before entering at-gate
+    checks: list = field(default_factory=list)  # list of Check objects
 
     # Project context — used to enrich AI drafts
     project_name: str = ""
@@ -66,8 +66,8 @@ class Config:
             lines.append(f"Conventions: {', '.join(self.conventions)}")
         if self.out_of_bounds:
             lines.append(f"Out of bounds: {', '.join(self.out_of_bounds)}")
-        if self.katas:
-            check_names = ", ".join(f"{k.name} (`{k.command}`)" for k in self.katas)
+        if self.checks:
+            check_names = ", ".join(f"{c.name} (`{c.command}`)" for c in self.checks)
             lines.append(f"Checks (must pass before at-gate): {check_names}")
         return "\n".join(lines)
 
@@ -80,7 +80,7 @@ _KNOWN_FIELDS = {
     "default_template",
     "git_auto_commit",
     "gate",
-    "katas",
+    "katas",  # legacy key, still read for back-compat
     "checks",
     "project_name",
     "description",
@@ -104,15 +104,15 @@ def load_config(root: Path) -> Config:
         return Config()
     extra = {k: v for k, v in data.items() if k not in _KNOWN_FIELDS}
 
-    raw_katas = data.get("checks") or data.get("katas") or []
-    katas = []
-    for k in raw_katas:
-        if isinstance(k, dict) and "name" in k and "command" in k:
-            katas.append(
-                Kata(
-                    name=k["name"],
-                    command=k["command"],
-                    description=k.get("description", ""),
+    raw_checks = data.get("checks") or data.get("katas") or []
+    checks = []
+    for c in raw_checks:
+        if isinstance(c, dict) and "name" in c and "command" in c:
+            checks.append(
+                Check(
+                    name=c["name"],
+                    command=c["command"],
+                    description=c.get("description", ""),
                 )
             )
 
@@ -124,7 +124,7 @@ def load_config(root: Path) -> Config:
         default_template=data.get("default_template", "feature"),
         git_auto_commit=data.get("git_auto_commit", True),
         gate=data.get("gate", "local"),
-        katas=katas,
+        checks=checks,
         project_name=data.get("project_name", ""),
         description=data.get("description", ""),
         languages=data.get("languages") or [],
@@ -154,8 +154,8 @@ def save_config(config: Config, root: Path) -> None:
     data["default_template"] = config.default_template
     data["git_auto_commit"] = config.git_auto_commit
     data["gate"] = config.gate
-    if config.katas:
-        data["checks"] = [k.to_dict() for k in config.katas]
+    if config.checks:
+        data["checks"] = [c.to_dict() for c in config.checks]
     # Project context
     if config.project_name:
         data["project_name"] = config.project_name

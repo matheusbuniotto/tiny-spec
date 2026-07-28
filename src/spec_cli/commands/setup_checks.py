@@ -12,7 +12,7 @@ from rich import box
 from rich.panel import Panel
 from rich.table import Table
 
-from ..config import Kata, load_config, save_config
+from ..config import Check, load_config, save_config
 from ..ui import console, error, find_root_or_error, success
 
 # Each detector: (name, description, detect_fn, command)
@@ -222,10 +222,10 @@ _DETECTORS: list[dict] = [
 ]
 
 
-def _detect_checks(root: Path) -> list[Kata]:
+def _detect_checks(root: Path) -> list[Check]:
     """Scan project and return detected checks, one per category."""
     seen_categories: set[str] = set()
-    results: list[Kata] = []
+    results: list[Check] = []
 
     for d in _DETECTORS:
         cat = d["category"]
@@ -234,7 +234,7 @@ def _detect_checks(root: Path) -> list[Kata]:
         try:
             if d["detect"](root):
                 results.append(
-                    Kata(name=d["name"], command=d["command"], description=d["description"])
+                    Check(name=d["name"], command=d["command"], description=d["description"])
                 )
                 seen_categories.add(cat)
         except Exception:
@@ -266,12 +266,12 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
         return
 
     if json_out:
-        if cfg.katas and not yes:
+        if cfg.checks and not yes:
             typer.echo(
                 json.dumps(
                     {
                         "detected": [k.to_dict() for k in detected],
-                        "existing": [k.to_dict() for k in cfg.katas],
+                        "existing": [k.to_dict() for k in cfg.checks],
                         "written": False,
                         "message": "Checks already configured. Use --yes to overwrite.",
                     }
@@ -279,7 +279,7 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
             )
             return
 
-        cfg.katas = detected
+        cfg.checks = detected
         save_config(cfg, root)
         typer.echo(
             json.dumps(
@@ -309,8 +309,8 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
         )
     )
 
-    if cfg.katas:
-        existing_cmds = ", ".join(k.command for k in cfg.katas)
+    if cfg.checks:
+        existing_cmds = ", ".join(k.command for k in cfg.checks)
         console.print(f"\n[yellow]Existing checks:[/yellow] {existing_cmds}")
 
     if not yes:
@@ -326,7 +326,7 @@ def cmd_setup_checks(yes: bool, json_out: bool, root: Path) -> None:
             console.print("[dim]Cancelled.[/dim]")
             return
 
-    cfg.katas = detected
+    cfg.checks = detected
     save_config(cfg, root)
     success(
         "checks",
