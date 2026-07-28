@@ -180,6 +180,18 @@ spec advance 0001 --note "Webhook signature verified, retries tested" --yes --js
 
 The `--json` flag makes every command scriptable. The `--yes` flag makes it non-interactive. Agents never block on prompts.
 
+### Verification summary
+
+`spec verify --summary <id>` shows a structured human verification summary for any spec:
+
+```bash
+spec verify 0001 --summary
+```
+
+Displays: spec info + acceptance criteria + gate checklist (split into agent-verifiable and human-only items) + git diff stat + commands to advance or revert. Supports `--json` for scripting.
+
+Useful at the end of an agent loop — see `scripts/spec-loop.sh` for a reference implementation that collects these summaries across multiple specs and shows them at the end.
+
 ### Project context for better AI drafts
 
 `spec init` creates a `.spec/config.yaml` where you describe your stack:

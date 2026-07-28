@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import time
 from pathlib import Path
@@ -12,10 +13,21 @@ import typer
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
+from rich.markdown import Markdown
 
 from ..config import Kata, load_config
 from ..storage import find_spec
 from ..ui import console, find_root_or_error, not_found
+from .gate_check import extract_gate_checklist, strip_class_markers, _split_checklist_items
+
+# Regex to extract Acceptance Criteria lines with AC labels
+_AC_RE = re.compile(r'^\s*-\s*\[ \]\s*\*\*AC', re.MULTILINE)
+
+# Regex to find ## Acceptance Criteria section
+_AC_SECTION_RE = re.compile(
+    r"## Acceptance Criteria\s*\n(.*?)(?=\n## |\Z)",
+    re.DOTALL,
+)
 
 
 def run_kata(kata: Kata, root: Path) -> dict:
@@ -238,3 +250,101 @@ def cmd_run_kata(spec_id: Optional[str], json_out: bool, root: Path) -> None:
         )
         raise typer.Exit(1)
     console.print()
+
+
+def cmd_verify_summary(spec_id: str, json_out: bool, root: Path) -> None:
+    """Print a structured human verification summary for a spec."""
+    root = find_root_or_error(root, json_out)
+    spec = find_spec(root, spec_id)
+    if not spec:
+        not_found(spec_id, json_out)
+        return
+
+    # Extract ACs from the spec body
+    ac_section_match = _AC_SECTION_RE.search(spec.body)
+    if ac_section_match:
+        ac_text = ac_section_match.group(1).strip()
+        ac_items = [l.strip() for l in ac_text.splitlines() if l.strip()]
+    else:
+        ac_items = []
+
+    # Extract gate checklist
+    checklist_raw = extract_gate_checklist(spec.body)
+    _, agent_items, human_items = _split_checklist_items(checklist_raw)
+    has_agent_items = len(agent_items) > 0
+
+    # Collect git diff evidence
+    diff_stat = ""
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--stat"], capture_output=True, text=True, cwd=root
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            diff_stat = result.stdout.rstrip()
+    except Exception:
+        diff_stat = ""
+
+    if json_out:
+        typer.echo(
+            json.dumps(
+                {
+                    "id": spec.id,
+                    "title": spec.title,
+                    "status": spec.status.value,
+                    "acceptance_criteria": ac_items,
+                    "gate_checklist": {
+                        "raw": checklist_raw,
+                        "agent_verifiable": agent_items,
+                        "human_only": human_items,
+                    },
+                    "evidence": {"git_diff_stat": diff_stat},
+                },
+                indent=2,
+            )
+        )
+        return
+
+    # Human-readable panel
+    md_parts = []
+    md_parts.append("**{spec.id}** — *{spec.title}*\n\nstatus: `{spec.status.value}`\n".format(
+        spec=spec
+    ))
+
+    if ac_items:
+        md_parts.append("**Acceptance Criteria**\n" + "\n".join(ac_items))
+
+    if checklist_raw:
+        agent_note = ""
+        if has_agent_items:
+            agent_note = ("  *(agent-verifiable: {n_agent}, "
+                         "human-only: {n_human})*").format(
+                n_agent=len(agent_items), n_human=len(human_items)
+            )
+        md_parts.append("**Gate Checklist**" + agent_note)
+        md_parts.append(strip_class_markers(checklist_raw))
+
+    if diff_stat:
+        md_parts.append("**Evidence — git diff --stat**\n```\n{diff}\n```".format(
+            diff=diff_stat
+        ))
+
+    md_parts.append(
+        "**Verdict** — run one of:\n"
+        "- `spec advance {id} --yes` — mark implemented\n"
+        "- `spec revert {id} --yes` — send back to draft".format(id=spec.id)
+    )
+
+    console.print(
+        Panel(
+            Markdown("\n\n".join(md_parts)),
+            title="[bold yellow]◈ Verification Summary[/bold yellow]",
+            box=box.ROUNDED,
+            border_style="yellow",
+        )
+    )
+
+    if has_agent_items:
+        console.print(
+            "  [dim]Items marked \\[agent] are meant for AI pre-verification. "
+            "Pass \u2014 don't re-do them. Items marked \\[human] need your judgment.[/dim]"
+        )
