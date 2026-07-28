@@ -308,6 +308,7 @@ export OPENAI_API_KEY=sk-...      # OpenAI
 bash scripts/spec-loop.sh --pick next --agent codex              # run next spec, human verify (default)
 bash scripts/spec-loop.sh --pick 0003 --agent codex --test manual # specific spec, manual impl
 bash scripts/spec-loop.sh --pick next --max 3                     # 3 specs, then stop
+bash scripts/spec-loop.sh --pick next --timeout 300               # cap each agent invocation at 5 minutes
 bash scripts/spec-loop.sh --pick next --agent codex --verifier codex  # codex verifies with fresh context
 bash scripts/spec-loop.sh --pick next --agent codex --worktree    # isolated git worktree per spec
 bash scripts/spec-loop.sh --pick next --dry-run                   # preview without changing anything
@@ -317,7 +318,8 @@ bash scripts/spec-loop.sh --pick next --dry-run                   # preview with
 
 - **Multi-agent**: supports `kimi`, `pi`, `codex`, `claude` with auto-detection
 - **Verifier split**: `--verifier human` (default) defers a structured summary for you; `--verifier codex` etc invokes a **different agent** with fresh context (ACs + diff + gate checklist only, no implementation plan)
-- **Worktree isolation**: `--worktree` creates an isolated git worktree per spec; merges to main on success, discards on failure
+- **Worktree isolation**: `--worktree` creates an isolated git worktree per spec; merges to `master` only when the merge is clean, preserves the worktree for manual resolution on conflicts, and discards failed work
+- **Optional agent timeout**: `--timeout <seconds>` caps each agent invocation; it defaults to `0` (unlimited)
 - **Evidence collection**: extracts ACs from the spec file, gate checklist via `spec gate-check --json`, and git diff stat — shows you exactly what to validate
 - **Compact output**: spinner with elapsed timer, heartbeat every 30s, one-line-per-phase results
 - **Human verification summary**: at end of loop, prints a structured block per spec with ACs, gate checklist, diff stat, and commands to validate
