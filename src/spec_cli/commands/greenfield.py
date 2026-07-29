@@ -14,6 +14,7 @@ from ..integrations.git import git_commit_spec, git_init
 from ..scaffold.agents import AGENTS
 from ..scaffold.agents_md import write_agents_md, write_sessionstart_hook
 from ..scaffold.claude_md import generate_claude_md
+from ..scaffold.loop_script import write_loop_script
 from ..scaffold.project_types import scaffold_project
 from ..ui import console, error, success
 
@@ -28,6 +29,7 @@ def cmd_greenfield(
     yes: bool,
     json_out: bool,
     hooks: bool = False,
+    loop_script: bool = False,
 ) -> None:
     root = Path(folder).resolve()
 
@@ -139,6 +141,8 @@ def cmd_greenfield(
         created.append("AGENTS.md")
     if hooks and write_sessionstart_hook(root):
         created.append(".claude/settings.json")
+    if loop_script and write_loop_script(root):
+        created.append("scripts/spec-loop.sh")
 
     if not spec_only:
         # 2. Write CLAUDE.md

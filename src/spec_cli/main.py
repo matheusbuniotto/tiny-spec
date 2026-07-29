@@ -72,15 +72,20 @@ def init(
     hooks: bool = typer.Option(
         False, "--hooks", help="Also write a Claude Code SessionStart hook (spec next --json)"
     ),
+    loop_script: bool = typer.Option(
+        False,
+        "--loop-script",
+        help="Also write scripts/spec-loop.sh (reference agent loop implementation)",
+    ),
     yes: bool = _YES,
     json_out: bool = _JSON,
     root: Path = _ROOT,
 ) -> None:
     """Init tiny-spec. Pass a folder to scaffold a greenfield project."""
     if folder:
-        cmd_greenfield(folder, project_type, author, spec_only, yes, json_out, hooks)
+        cmd_greenfield(folder, project_type, author, spec_only, yes, json_out, hooks, loop_script)
     else:
-        cmd_init(root, author, yes, json_out, hooks)
+        cmd_init(root, author, yes, json_out, hooks, loop_script)
 
 
 @app.command(rich_help_panel="Lifecycle")
