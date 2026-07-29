@@ -32,7 +32,7 @@ STATUS_STYLE: dict[SpecStatus, tuple[str, str]] = {
 TRANSITIONS: dict[SpecStatus, list[SpecStatus]] = {
     SpecStatus.DRAFT: [SpecStatus.APPROVED],
     SpecStatus.APPROVED: [SpecStatus.IN_PROGRESS, SpecStatus.DRAFT],
-    SpecStatus.IN_PROGRESS: [SpecStatus.AT_GATE, SpecStatus.APPROVED],
+    SpecStatus.IN_PROGRESS: [SpecStatus.AT_GATE, SpecStatus.APPROVED, SpecStatus.DRAFT],
     SpecStatus.AT_GATE: [SpecStatus.IMPLEMENTED, SpecStatus.IN_PROGRESS],
     SpecStatus.IMPLEMENTED: [],
     SpecStatus.CLOSED: [],
