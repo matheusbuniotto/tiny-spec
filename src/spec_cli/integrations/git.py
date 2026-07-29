@@ -29,6 +29,24 @@ def git_init(root: Path) -> bool:
     return result.returncode == 0
 
 
+def ensure_gitignore_entries(root: Path, entries: list[str]) -> bool:
+    """Append any of `entries` missing from .gitignore (creating it if needed).
+
+    Without this, .spec/logs/ (agent transcripts, often huge) gets swept into
+    `git add -A` and buries real code diffs under thousands of log lines.
+    Returns True if the file was created or changed.
+    """
+    path = root / ".gitignore"
+    existing = path.read_text().splitlines() if path.exists() else []
+    missing = [e for e in entries if e not in {line.strip() for line in existing}]
+    if not missing:
+        return False
+    separator = [""] if existing else []
+    lines = existing + separator + ["# tiny-spec"] + missing
+    path.write_text("\n".join(lines) + "\n")
+    return True
+
+
 def git_recent_commits(root: Path, n: int = 10) -> list[dict]:
     """Return the last n commits as a list of dicts with sha, author, date, subject."""
     fmt = "%H\x1f%an\x1f%ad\x1f%s"

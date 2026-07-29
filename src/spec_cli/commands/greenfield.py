@@ -10,7 +10,7 @@ import yaml
 from rich.tree import Tree
 
 from ..config import Config, save_config
-from ..integrations.git import git_commit_spec, git_init
+from ..integrations.git import ensure_gitignore_entries, git_commit_spec, git_init
 from ..scaffold.agents import AGENTS
 from ..scaffold.agents_md import write_agents_md, write_sessionstart_hook
 from ..scaffold.claude_md import generate_claude_md
@@ -119,6 +119,8 @@ def cmd_greenfield(
     # 1. Git init
     git_init(root)
     created.append(".git/")
+    if ensure_gitignore_entries(root, [".spec/logs/"]):
+        created.append(".gitignore")
 
     # 2. Initialize .spec/
     _init_spec(root, resolved_author, cfg)

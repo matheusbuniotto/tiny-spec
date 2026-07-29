@@ -7,7 +7,12 @@ from pathlib import Path
 import typer
 import yaml
 
-from ..integrations.git import git_context_markdown, git_init, is_git_repo
+from ..integrations.git import (
+    ensure_gitignore_entries,
+    git_context_markdown,
+    git_init,
+    is_git_repo,
+)
 from ..scaffold.agents_md import write_agents_md, write_sessionstart_hook
 from ..scaffold.loop_script import write_loop_script
 from ..ui import console, error, success
@@ -46,6 +51,7 @@ def cmd_init(
     sd.mkdir(parents=True)
     (sd / "specs").mkdir()
     (sd / "decisions").mkdir()
+    ensure_gitignore_entries(root, [".spec/logs/"])
     (sd / "README.md").write_text(
         "# Specs\n\nManaged by tiny-spec.\n\n"
         "- `specs/` — active specs\n"

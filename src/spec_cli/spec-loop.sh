@@ -484,7 +484,7 @@ run_verification() {
     local gate_check ac_text diff_ctx
 
     # Gate checklist: use --json + python3
-    local gate_json
+    local gate_json placeholder_count=0
     gate_json=$(spec gate-check "$SPEC_ID" --json 2>/dev/null || echo "")
     if [[ -n "$gate_json" ]] && command -v python3 &>/dev/null; then
         gate_check=$(python3 -c "
@@ -494,6 +494,13 @@ try:
     print(d.get('gate_checklist', ''))
 except: pass
 " <<< "$gate_json" 2>/dev/null || spec gate-check "$SPEC_ID" 2>/dev/null || echo "")
+        placeholder_count=$(python3 -c "
+import sys, json
+try:
+    d = json.loads(sys.stdin.read())
+    print(len(d.get('placeholder_items', [])))
+except: print(0)
+" <<< "$gate_json" 2>/dev/null || echo 0)
     else
         gate_check=$(spec gate-check "$SPEC_ID" 2>/dev/null || echo "")
     fi
@@ -511,16 +518,30 @@ except: pass
         diff_ctx=$(git -C "$WORKTREE_DIR" diff --stat 2>/dev/null || echo "")
     fi
 
+    [[ "$placeholder_count" -gt 0 ]] && \
+        hesitate "${placeholder_count} gate checklist item(s) still have unfilled placeholders"
+
     # ─── Branch: human vs agent verifier ────────────────────────────────────
     if [[ -z "$VERIFY_AGENT" ]]; then
         local summary
-        summary=$(build_human_summary "$ac_text" "$gate_check" "$diff_ctx")
+        summary=$(build_human_summary "$ac_text" "$gate_check" "$diff_ctx" "$placeholder_count")
         HUMAN_SUMMARIES+=("$summary")
         out "  ${Y}▣${X} human verify — #${SPEC_ID} (deferred to end of loop)"
         return 3
     fi
 
     # AGENT verification (fresh context)
+    local placeholder_note=""
+    if [[ "$placeholder_count" -gt 0 ]]; then
+        placeholder_note="
+
+NOTE: ${placeholder_count} checklist item(s) still contain unfilled template
+placeholders (\`<...>\` or \`[...]\`) instead of a real command or scenario —
+these were never written by whoever drafted the spec. Report those as
+NEEDS HUMAN, not PASS or FAIL — you cannot verify an item that doesn't say
+what to check."
+    fi
+
     local review_prompt
     review_prompt=$(cat <<REVIEW
 You are a verification agent. You did NOT implement this spec — you are reviewing someone else's work with fresh eyes.
@@ -532,6 +553,7 @@ ${ac_text}
 
 ## Human Gate Checklist
 ${gate_check}
+${placeholder_note}
 
 ## Diff Summary
 ${diff_ctx}
@@ -584,19 +606,28 @@ REVIEW
 
 # ─── Human verification summary ──────────────────────────────────────────────
 build_human_summary() {
-    local ac_text="$1" gate_check="$2" diff_ctx="$3"
+    local ac_text="$1" gate_check="$2" diff_ctx="$3" placeholder_count="${4:-0}"
     local spec_file
     spec_file=$(find "$PROJECT_DIR/.spec/specs" -name "${SPEC_ID}-*.md" 2>/dev/null | head -1)
 
     local ds="$diff_ctx"
     [[ -z "$ds" ]] && ds="  (no changes or not in a worktree)"
 
+    local placeholder_warning=""
+    if [[ "$placeholder_count" -gt 0 ]]; then
+        placeholder_warning="
+  ⚠ ${placeholder_count} checklist item(s) below still have unfilled
+    placeholders (\`<...>\` or \`[...]\`) instead of a real command —
+    fill those in before trusting this checklist.
+"
+    fi
+
     cat <<SUMMARY
 ────────────────────────────────────────────────────────────────────────
   #${SPEC_ID} — ${SPEC_TITLE}
   spec:  ${spec_file:-.spec/specs/${SPEC_ID}-*.md}
   log:   ${LOG_DIR}/${SPEC_ID}-agent.log
-
+${placeholder_warning}
   ▸ WHAT TO VALIDATE
 
 ${ac_text}
