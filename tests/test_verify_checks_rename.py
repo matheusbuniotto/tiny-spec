@@ -64,18 +64,6 @@ def test_verify_runs_configured_checks(tmp_path, monkeypatch):
     assert "katas" not in out
 
 
-def test_run_kata_still_works_but_is_hidden(tmp_path, monkeypatch):
-    _init_with_one_check(tmp_path, monkeypatch)
-
-    result = runner.invoke(app, ["run-kata", "--json"])
-    assert result.exit_code == 0
-    assert json.loads(result.stdout)["all_passed"] is True
-
-    help_result = runner.invoke(app, ["--help"])
-    assert "run-kata" not in help_result.stdout
-    assert "verify" in help_result.stdout
-
-
 def _failing_check_project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner.invoke(app, ["init", "--yes", "--json"])

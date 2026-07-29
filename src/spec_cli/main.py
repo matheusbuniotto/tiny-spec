@@ -354,16 +354,6 @@ def verify(
         cmd_run_check(spec_id, json_out, root)
 
 
-@app.command("run-kata", rich_help_panel="Quality", hidden=True)
-def run_kata_alias(
-    spec_id: Optional[str] = typer.Argument(None, help="Spec ID for context (optional)"),
-    json_out: bool = _JSON,
-    root: Path = _ROOT,
-) -> None:
-    """Deprecated alias for `spec verify`."""
-    cmd_run_check(spec_id, json_out, root)
-
-
 # ── Setup ────────────────────────────────────────────────────
 
 
