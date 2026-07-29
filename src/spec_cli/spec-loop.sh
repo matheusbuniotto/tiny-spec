@@ -133,6 +133,18 @@ bad()       { out "  ${R}✗${X} $1"; }
 hesitate()  { out "  ${Y}⚠${X} $1"; }
 hdr()       { v "\n${B}${B0}── $1 ──${X}"; }
 
+# Last non-blank line of a log, ANSI/CR stripped, truncated — for the
+# compact-mode spinner tail so you can see what the agent is doing without
+# the full firehose.
+_tail_snippet() {
+    tail -n 5 "$1" 2>/dev/null \
+        | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' \
+        | tr -d '\r' \
+        | grep -v '^[[:space:]]*$' \
+        | tail -n 1 \
+        | cut -c1-60
+}
+
 require() {
     command -v "$1" &>/dev/null || { bad "missing: $1"; exit 1; }
 }
@@ -329,11 +341,22 @@ invoke_agent() {
         *)      bad "unknown agent: $AGENT"; return 1 ;;
     esac
 
-    python3 -c '
+    : > "$output_log"
+
+    if $VERBOSE; then
+        # Stream live, indented — same convention as quick()'s verbose output.
+        python3 -c '
 import os, sys
 os.setsid()
 os.execvp(sys.argv[1], sys.argv[1:])
-' "${agent_cmd[@]}" < "$prompt_file" >"$output_log" 2>&1 &
+' "${agent_cmd[@]}" < "$prompt_file" > >(tee -a "$output_log" | sed 's/^/    /' >&2) 2>&1 &
+    else
+        python3 -c '
+import os, sys
+os.setsid()
+os.execvp(sys.argv[1], sys.argv[1:])
+' "${agent_cmd[@]}" < "$prompt_file" >>"$output_log" 2>&1 &
+    fi
     cmd_pid=$!
 
     $VERBOSE && v "  ${D}agent: $AGENT${X}"
@@ -355,7 +378,10 @@ os.execvp(sys.argv[1], sys.argv[1:])
         if ! $VERBOSE; then
             local t="${e}s"
             [[ $e -ge 60 ]] && t="$((e/60))m$(printf '%02d' $((e%60)))"
-            printf "\r${D}${sc[$((i%10))]}${X} ${B}%s${X} ${D}(%s)${X}   " "$label" "$t" >&2
+            local tail_line
+            tail_line=$(_tail_snippet "$output_log")
+            printf "\r\033[K${D}${sc[$((i%10))]}${X} ${B}%s${X} ${D}(%s)${X}  ${D}%s${X}" \
+                "$label" "$t" "$tail_line" >&2
             if [[ $((e - last_hb)) -ge 30 ]]; then
                 last_hb=$e
                 printf "\n${D}  … %s (%s)${X}\n" "$label" "$t" >&2
