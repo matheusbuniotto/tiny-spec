@@ -9,10 +9,18 @@ import yaml
 
 from ..integrations.git import git_context_markdown, git_init, is_git_repo
 from ..scaffold.agents_md import write_agents_md, write_sessionstart_hook
+from ..scaffold.loop_script import write_loop_script
 from ..ui import console, error, success
 
 
-def cmd_init(root: Path, author: str, yes: bool, json_out: bool, hooks: bool = False) -> None:
+def cmd_init(
+    root: Path,
+    author: str,
+    yes: bool,
+    json_out: bool,
+    hooks: bool = False,
+    loop_script: bool = False,
+) -> None:
     sd = root / ".spec"
 
     if sd.exists():
@@ -105,6 +113,7 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
 
     agents_md_written = write_agents_md(root)
     hook_written = write_sessionstart_hook(root) if hooks else False
+    loop_script_written = write_loop_script(root) if loop_script else False
 
     if json_out:
         typer.echo(
@@ -117,6 +126,7 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
                     "git_context": bool(git_context),
                     "agents_md": agents_md_written,
                     "sessionstart_hook": hook_written,
+                    "loop_script": loop_script_written,
                 }
             )
         )
@@ -132,6 +142,10 @@ out_of_bounds: []                 # e.g. [no jQuery, no raw SQL]
             git_line += "\n  [dim]Agents:[/dim] [yellow]AGENTS.md exists — left untouched[/yellow]"
         if hook_written:
             git_line += "\n  [dim]Hook:[/dim]  [green]SessionStart[/green] [dim]→ .claude/settings.json[/dim]"
+        if loop_script_written:
+            git_line += (
+                "\n  [dim]Loop:[/dim]  [green]scripts/spec-loop.sh[/green] [dim]written[/dim]"
+            )
         success(
             "tiny-spec",
             (

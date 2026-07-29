@@ -305,7 +305,12 @@ export OPENAI_API_KEY=sk-...      # OpenAI
 
 ## Automating specs with AI agents
 
-`scripts/spec-loop.sh` is a reference implementation for running specs with AI agents in a loop. It handles the full lifecycle:
+`scripts/spec-loop.sh` is a reference implementation for running specs with AI agents in a loop. It handles the full lifecycle. It ships inside the `tiny-spec` package, so `uv tool install`/`pip install` users get it too — scaffold it into your project with:
+
+```bash
+spec init --loop-script       # existing project, adds scripts/spec-loop.sh
+spec init myproject --loop-script  # greenfield, same flag
+```
 
 ```bash
 bash scripts/spec-loop.sh --pick next --agent codex              # run next spec, human verify (default)
