@@ -289,6 +289,9 @@ uvx tiny-spec
 
 # Or install as a persistent tool
 uv tool install tiny-spec
+
+# Or install straight from the repo (latest main, no PyPI wait)
+uv tool install git+https://github.com/matheusbuniotto/tiny-spec
 ```
 
 For AI drafting, set your API key:
