@@ -133,16 +133,19 @@ bad()       { out "  ${R}✗${X} $1"; }
 hesitate()  { out "  ${Y}⚠${X} $1"; }
 hdr()       { v "\n${B}${B0}── $1 ──${X}"; }
 
-# Last non-blank line of a log, ANSI/CR stripped, truncated — for the
-# compact-mode spinner tail so you can see what the agent is doing without
-# the full firehose.
-_tail_snippet() {
-    tail -n 5 "$1" 2>/dev/null \
+# Last N lines of a log, ANSI/CR stripped — for failure notes fed back into
+# gate_notes (which build_prompt() re-reads via `spec show --full` on the
+# next attempt).
+_log_excerpt() {
+    tail -n "${2:-20}" "$1" 2>/dev/null \
         | sed -E 's/\x1b\[[0-9;]*[a-zA-Z]//g' \
-        | tr -d '\r' \
-        | grep -v '^[[:space:]]*$' \
-        | tail -n 1 \
-        | cut -c1-60
+        | tr -d '\r'
+}
+
+# Last non-blank line of a log, truncated — for the compact-mode spinner
+# tail so you can see what the agent is doing without the full firehose.
+_tail_snippet() {
+    _log_excerpt "$1" 5 | grep -v '^[[:space:]]*$' | tail -n 1 | cut -c1-60
 }
 
 require() {
@@ -669,7 +672,12 @@ advance_to_done() {
 }
 
 # ─── Failure ──────────────────────────────────────────────────────────────────
+# $1 = reason (freeform, can be multi-line). Lands in gate_notes, which
+# accumulates across attempts and gets re-read into the prompt next time
+# this spec is picked up (via build_prompt()'s `spec show --full` call) —
+# so a real reason here means the next attempt doesn't start cold.
 handle_failure() {
+    local reason="${1:-no reason captured}"
     hdr "FAILURE"
     if $DRY_RUN; then status "revert (dry-run)"; return; fi
 
@@ -683,7 +691,7 @@ handle_failure() {
         v "  worktree discarded"
     fi
 
-    spec revert "$SPEC_ID" --note "Agent failed e2e (attempt $1)" --yes --json >/dev/null 2>&1 || true
+    spec revert "$SPEC_ID" --note "$reason" --yes --json >/dev/null 2>&1 || true
     spec sync 2>/dev/null || true
     v "  reverted"
 }
@@ -734,7 +742,10 @@ main() {
                 if run_agent; then break; else
                     if [[ $retry -ge $max_retries ]]; then
                         bad "agent failed ($max_retries)x — #${SPEC_ID}"
-                        handle_failure "$retry"
+                        local crash_log="$LOG_DIR/${SPEC_ID}-agent.log"
+                        handle_failure "Implementation crashed after ${retry} attempt(s). Last agent output ($crash_log):
+
+$(_log_excerpt "$crash_log" 20)"
                         exit 1
                     fi
                     hesitate "retry $retry/$max_retries"
@@ -762,8 +773,11 @@ main() {
             1)
                 bad "verification failed — #${SPEC_ID}"
                 if [[ "$TEST" == "agent" ]]; then
-                    handle_failure 1
-                    v "  log: $LOG_DIR/${SPEC_ID}-review.log"
+                    local review_log="$LOG_DIR/${SPEC_ID}-review.log"
+                    handle_failure "Verification FAILED. Reviewer's findings ($review_log):
+
+$(_log_excerpt "$review_log" 25)"
+                    v "  log: $review_log"
                     exit 1
                 else
                     exit 1
