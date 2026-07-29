@@ -27,6 +27,11 @@ _CLASS_MARKER_RE = re.compile(r"^\[(agent|human)\]\s*")
 
 _CHECKBOX_PREFIX_RE = re.compile(r"^(\s*-\s*(?:\[[ xX]\]\s*)?)(.*)$")
 
+# `<test command>`, `[describe exact steps...]` — unfilled template placeholders
+# left in a checklist item instead of a real command or scenario. Checked
+# after class-marker stripping, so `[agent]`/`[human]` never match here.
+_PLACEHOLDER_TOKEN_RE = re.compile(r"<[^<>\n]*>|\[[^\[\]\n]*\]")
+
 
 def extract_gate_checklist(body: str) -> str:
     m = _GATE_CHECKLIST_RE.search(body)
@@ -75,6 +80,18 @@ def _parse_checklist_items(checklist: str) -> list[str]:
     return items
 
 
+def find_placeholder_items(checklist: str) -> list[str]:
+    """Checklist items whose text still contains an unfilled `<...>` or
+    `[...]` placeholder instead of a real command or scenario — a checklist
+    full of these can't actually verify anything."""
+    flagged = []
+    for item in _parse_checklist_items(checklist):
+        _, text = classify_checklist_item(item)
+        if _PLACEHOLDER_TOKEN_RE.search(text):
+            flagged.append(text)
+    return flagged
+
+
 def _split_checklist_items(checklist: str) -> tuple[list[str], list[str], list[str]]:
     """Parse items into (flat, agent_verifiable, human_only), markers stripped."""
     flat: list[str] = []
@@ -96,6 +113,8 @@ def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
     checklist = extract_gate_checklist(spec.body)
     gate_mode = effective_gate(spec, load_config(root))
 
+    placeholder_items = find_placeholder_items(checklist)
+
     if json_out:
         items, agent_verifiable, human_only = _split_checklist_items(checklist)
         typer.echo(
@@ -110,6 +129,7 @@ def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
                     "gate_checklist_items": items,
                     "agent_verifiable": agent_verifiable,
                     "human_only": human_only,
+                    "placeholder_items": placeholder_items,
                 }
             )
         )
@@ -127,6 +147,18 @@ def cmd_gate_check(spec_id: str, json_out: bool, root: Path) -> None:
             )
         )
         return
+
+    if placeholder_items:
+        console.print(
+            Panel(
+                "[yellow]⚠ "
+                f"{len(placeholder_items)} item(s) still have unfilled template placeholders "
+                "(`<...>` or `[...]`) — this checklist can't verify anything until they're "
+                "replaced with real commands and scenarios.[/yellow]",
+                box=box.ROUNDED,
+                border_style="yellow",
+            )
+        )
 
     console.print(
         Panel(
