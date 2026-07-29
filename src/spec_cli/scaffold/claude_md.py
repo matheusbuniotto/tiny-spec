@@ -118,23 +118,20 @@ Specialist agents are in `.claude/agents/`. Each has one job.
 |---|---|
 | `spec-manager` | Creating/triaging specs, pipeline health, lifecycle management |
 | `architect` | Spec is approved and needs a technical plan before coding starts |
-| `implementer` | Implementing an approved spec with a plan.md |
 | `reviewer` | Verifying implemented code against AC before or at gate |
-| `tester` | Writing tests mapped to acceptance criteria |
-| `data-engineer` | Data pipeline or experiment specs, schema changes, DQ gates |
-| `explorer` | Codebase health check, finding debt, mapping unfamiliar areas |
-| `run-reviewer` | After a session — improving agents, CLAUDE.md, constitution |
+
+Implementation itself doesn't need its own persona — write the code directly,
+following `plan.md` if `architect` produced one.
 
 ### Standard workflow
 ```
 spec-manager (creates + approves spec)
   → architect (writes plan.md)
-    → implementer (writes code + tests)
-      → tester (validates coverage)
-        → reviewer (AC compliance check)
-          → spec-manager (advances to at-gate)
-            → [HUMAN verifies gate checklist]
-              → spec-manager (passes gate)
+    → [implement — code + tests, following plan.md]
+      → reviewer (AC compliance check, fresh context)
+        → spec-manager (advances to at-gate)
+          → [HUMAN verifies gate checklist]
+            → spec-manager (passes gate)
 ```
 
 ---
